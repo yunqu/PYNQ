@@ -38,7 +38,7 @@ from multiprocessing.connection import Client
 from . import general_const
 from .gpio import GPIO
 from .mmio import MMIO
-from .ps import CLK
+from .ps import Clock
 
 __author__ = "Yun Rock Qu"
 __copyright__ = "Copyright 2016, Xilinx"
@@ -181,9 +181,9 @@ def _get_clk(tcl_name):
         The dictionary storing the divisors, and the clock state.
 
     """
-    regex0 = 'CONFIG.PCW_(FCLK[0-9]+)_PERIPHERAL_DIVISOR([0-9]+) ' + \
+    regex0 = 'CONFIG.PCW_FCLK([0-9]+)_PERIPHERAL_DIVISOR([0-9]+) ' + \
             '{([0-9]+)}' + '.*'
-    regex1 = 'CONFIG.PCW_FPGA_(FCLK[0-9]+)_ENABLE ' + \
+    regex1 = 'CONFIG.PCW_FPGA_FCLK([0-9]+)_ENABLE ' + \
              '{([0-9]+)}' + '.*'
     result = {}
 
@@ -192,13 +192,13 @@ def _get_clk(tcl_name):
             m0 = re.search(regex0, line, re.IGNORECASE)
             if m0:
                 if int(m0.group(2))==0:
-                    result[m0.group(1).lower()] = [int(m0.group(3))]
+                    result[int(m0.group(1))] = [int(m0.group(3))]
                 else:
-                    result[m0.group(1).lower()].append(int(m0.group(3)))
+                    result[int(m0.group(1))].append(int(m0.group(3)))
 
             m1 = re.search(regex1, line, re.IGNORECASE)
             if m1:
-                result[m1.group(1).lower()].append(int(m1.group(2)))
+                result[int(m1.group(1))].append(int(m1.group(2)))
 
     return result
 
@@ -749,10 +749,11 @@ class Bitstream(PL):
         PL.server_update()
 
         # Reset all the PL clocks to default
-        clk_manager = CLK()
-        for name,rate in zip(general_const.VALID_PL_CLK_NAMES,
-                             general_const.DEFAULT_CLK_RATE):
-            clk_manager.set_clk(name, clk_rate=rate)
+        clk_manager = Clock()
+        clk_manager.fclk0_mhz = general_const.DEFAULT_CLK_MHZ[0]
+        clk_manager.fclk1_mhz = general_const.DEFAULT_CLK_MHZ[1]
+        clk_manager.fclk2_mhz = general_const.DEFAULT_CLK_MHZ[2]
+        clk_manager.fclk3_mhz = general_const.DEFAULT_CLK_MHZ[3]
 
 class Overlay(PL):
     """This class keeps track of a single bitstream's state and contents.
@@ -874,11 +875,11 @@ class Overlay(PL):
         # Reset the PL clocks
         tcl_name = _get_tcl_name(self.bitfile_name)
         clk_dict = _get_clk(tcl_name)
-        clk_manager = CLK()
-        for i in general_const.VALID_PL_CLK_NAMES:
+        clk_manager = Clock()
+        for i in range(4):
             div0, div1, enabled = clk_dict[i]
             if enabled:
-                clk_manager.set_clk(i, div0, div1)
+                clk_manager.set_fclk(i, div0, div1)
 
     def is_loaded(self):
         """This method checks whether a bitstream is loaded.
