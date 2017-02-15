@@ -152,11 +152,11 @@ arm_clk_div = _get_reg_value(general_const.SCLR_BASE_ADDRESS +
                              general_const.ARM_CLK_DIV_BIT_OFFSET,
                              general_const.ARM_CLK_DIV_BIT_WIDTH)
 
-class Clock_Meta(type):
+class Clocks_Meta(type):
     """Meta class for all the PS and PL clocks not exposed to users.
 
     Since this is the meta class for all the clocks, no attributes or methods
-    are exposed to users. Users should use the class `Clock` instead.
+    are exposed to users. Users should use the class `Clocks` instead.
 
     """
     @property
@@ -441,7 +441,7 @@ class Clock_Meta(type):
                        general_const.CLK_DIV1_BIT_OFFSET,
                        general_const.CLK_DIV1_BIT_WIDTH, div1)
 
-class Clock(metaclass=Clock_Meta):
+class Clocks(metaclass=Clocks_Meta):
     """Class for all the PS and PL clocks exposed to users.
 
     With this class, users can get the CPU clock and all the PL clocks. Users

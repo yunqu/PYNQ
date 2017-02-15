@@ -38,7 +38,7 @@ from multiprocessing.connection import Client
 from . import general_const
 from .gpio import GPIO
 from .mmio import MMIO
-from .ps import Clock
+from .ps import Clocks
 
 __author__ = "Yun Rock Qu"
 __copyright__ = "Copyright 2016, Xilinx"
@@ -749,10 +749,10 @@ class Bitstream(PL):
         PL.server_update()
 
         # Reset all the PL clocks to default
-        Clock.fclk0_mhz = general_const.DEFAULT_CLK_MHZ[0]
-        Clock.fclk1_mhz = general_const.DEFAULT_CLK_MHZ[1]
-        Clock.fclk2_mhz = general_const.DEFAULT_CLK_MHZ[2]
-        Clock.fclk3_mhz = general_const.DEFAULT_CLK_MHZ[3]
+        Clocks.fclk0_mhz = general_const.DEFAULT_CLK_MHZ[0]
+        Clocks.fclk1_mhz = general_const.DEFAULT_CLK_MHZ[1]
+        Clocks.fclk2_mhz = general_const.DEFAULT_CLK_MHZ[2]
+        Clocks.fclk3_mhz = general_const.DEFAULT_CLK_MHZ[3]
 
 class Overlay(PL):
     """This class keeps track of a single bitstream's state and contents.
@@ -877,7 +877,7 @@ class Overlay(PL):
         for i in range(4):
             div0, div1, enabled = clk_dict[i]
             if enabled:
-                Clock.set_fclk(i, div0, div1)
+                Clocks.set_fclk(i, div0, div1)
 
     def is_loaded(self):
         """This method checks whether a bitstream is loaded.
