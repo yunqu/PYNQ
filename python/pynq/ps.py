@@ -152,20 +152,15 @@ arm_clk_div = _get_reg_value(general_const.SCLR_BASE_ADDRESS +
                              general_const.ARM_CLK_DIV_BIT_OFFSET,
                              general_const.ARM_CLK_DIV_BIT_WIDTH)
 
-class Clock(object):
-    """Class for all the PS and PL clocks exposed to users.
+class Clock_Meta(type):
+    """Meta class for all the PS and PL clocks not exposed to users.
 
-    With this class, users can get the CPU clock and all the PL clocks. Users
-    can also set PL clocks to other values using this class.
-
-    Attributes
-    ----------
-    clk : dict
-        The dictionary storing the clock names and their rates.
+    Since this is the meta class for all the clocks, no attributes or methods
+    are exposed to users. Users should use the class `Clock` instead.
 
     """
     @property
-    def cpu_mhz(self):
+    def cpu_mhz(cls):
         """The getter method for CPU clock.
 
         The returned clock rate is measured in MHz.
@@ -181,7 +176,7 @@ class Clock(object):
                              arm_clk_mult / arm_clk_div, 6)
 
     @cpu_mhz.setter
-    def cpu_mhz(self,clk_mhz):
+    def cpu_mhz(cls,clk_mhz):
         """The setter method for CPU clock.
 
         Since the CPU clock should not be changed, setting it will raise
@@ -191,13 +186,16 @@ class Clock(object):
         raise RuntimeError("Not allowed to change CPU clock.")
     
     @property
-    def fclk0_mhz(self):
+    def fclk0_mhz(cls):
         """The getter method for PL clock 0.
 
         This method will read the register values, do the calculation,
         and return the current clock rate.
 
-        The returned clock rate is measured in MHz.
+        Returns
+        -------
+        float
+            The returned clock rate measured in MHz.
 
         """
         clk_idx = 0
@@ -222,7 +220,7 @@ class Clock(object):
                      fclk_mult / (fclk_div0 * fclk_div1), 6)
 
     @fclk0_mhz.setter
-    def fclk0_mhz(self, clk_mhz):
+    def fclk0_mhz(cls, clk_mhz):
         """The setter method for PL clock 0.
 
         Parameters
@@ -231,16 +229,19 @@ class Clock(object):
             The clock rate in MHz.
 
         """
-        self.set_fclk(0, clk_mhz=clk_mhz)
+        cls.set_fclk(0, clk_mhz=clk_mhz)
 
     @property
-    def fclk1_mhz(self):
+    def fclk1_mhz(cls):
         """The getter method for PL clock 1.
 
         This method will read the register values, do the calculation,
         and return the current clock rate.
 
-        The returned clock rate is measured in MHz.
+        Returns
+        -------
+        float
+            The returned clock rate measured in MHz.
 
         """
         clk_idx = 1
@@ -265,7 +266,7 @@ class Clock(object):
                      fclk_mult / (fclk_div0 * fclk_div1), 6)
 
     @fclk1_mhz.setter
-    def fclk1_mhz(self, clk_mhz):
+    def fclk1_mhz(cls, clk_mhz):
         """The setter method for PL clock 1.
 
         Parameters
@@ -274,16 +275,19 @@ class Clock(object):
             The clock rate in MHz.
 
         """
-        self.set_fclk(1, clk_mhz=clk_mhz)
+        cls.set_fclk(1, clk_mhz=clk_mhz)
 
     @property
-    def fclk2_mhz(self):
+    def fclk2_mhz(cls):
         """The getter method for PL clock 2.
 
         This method will read the register values, do the calculation,
         and return the current clock rate.
 
-        The returned clock rate is measured in MHz.
+        Returns
+        -------
+        float
+            The returned clock rate measured in MHz.
 
         """
         clk_idx = 2
@@ -308,7 +312,7 @@ class Clock(object):
                      fclk_mult / (fclk_div0 * fclk_div1), 6)
 
     @fclk2_mhz.setter
-    def fclk2_mhz(self, clk_mhz):
+    def fclk2_mhz(cls, clk_mhz):
         """The setter method for PL clock 2.
 
         Parameters
@@ -317,16 +321,19 @@ class Clock(object):
             The clock rate in MHz.
 
         """
-        self.set_fclk(2, clk_mhz=clk_mhz)
+        cls.set_fclk(2, clk_mhz=clk_mhz)
 
     @property
-    def fclk3_mhz(self):
+    def fclk3_mhz(cls):
         """The getter method for PL clock 3.
 
         This method will read the register values, do the calculation,
         and return the current clock rate.
 
-        The returned clock rate is measured in MHz.
+        Returns
+        -------
+        float
+            The returned clock rate measured in MHz.
 
         """
         clk_idx = 3
@@ -351,7 +358,7 @@ class Clock(object):
                      fclk_mult / (fclk_div0 * fclk_div1), 6)
 
     @fclk3_mhz.setter
-    def fclk3_mhz(self, clk_mhz):
+    def fclk3_mhz(cls, clk_mhz):
         """The setter method for PL clock 3.
 
         Parameters
@@ -360,7 +367,7 @@ class Clock(object):
             The clock rate in MHz.
 
         """
-        self.set_fclk(3, clk_mhz=clk_mhz)
+        cls.set_fclk(3, clk_mhz=clk_mhz)
 
     @staticmethod
     def set_fclk(clk_idx, div0=None, div1=None, clk_mhz=100.000000):
@@ -433,3 +440,33 @@ class Clock(object):
                        general_const.CLK_CTRL_REG_OFFSET[clk_idx],
                        general_const.CLK_DIV1_BIT_OFFSET,
                        general_const.CLK_DIV1_BIT_WIDTH, div1)
+
+class Clock(metaclass=Clock_Meta):
+    """Class for all the PS and PL clocks exposed to users.
+
+    With this class, users can get the CPU clock and all the PL clocks. Users
+    can also set PL clocks to other values using this class.
+
+    Attributes
+    ----------
+    cpu_mhz : float
+        The clock rate of the CPU, measured in MHz.
+    fclk0_mhz : float
+        The clock rate of the PL clock 0, measured in MHz.
+    fclk1_mhz : float
+        The clock rate of the PL clock 1, measured in MHz.
+    fclk2_mhz : float
+        The clock rate of the PL clock 2, measured in MHz.
+    fclk3_mhz : float
+        The clock rate of the PL clock 3, measured in MHz.
+
+    """
+    def __init__(self):
+        """Return a new PL object.
+
+        This class requires a root permission.
+
+        """
+        euid = os.geteuid()
+        if euid != 0:
+            raise EnvironmentError('Root permissions required.')

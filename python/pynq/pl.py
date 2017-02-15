@@ -749,11 +749,10 @@ class Bitstream(PL):
         PL.server_update()
 
         # Reset all the PL clocks to default
-        clk_manager = Clock()
-        clk_manager.fclk0_mhz = general_const.DEFAULT_CLK_MHZ[0]
-        clk_manager.fclk1_mhz = general_const.DEFAULT_CLK_MHZ[1]
-        clk_manager.fclk2_mhz = general_const.DEFAULT_CLK_MHZ[2]
-        clk_manager.fclk3_mhz = general_const.DEFAULT_CLK_MHZ[3]
+        Clock.fclk0_mhz = general_const.DEFAULT_CLK_MHZ[0]
+        Clock.fclk1_mhz = general_const.DEFAULT_CLK_MHZ[1]
+        Clock.fclk2_mhz = general_const.DEFAULT_CLK_MHZ[2]
+        Clock.fclk3_mhz = general_const.DEFAULT_CLK_MHZ[3]
 
 class Overlay(PL):
     """This class keeps track of a single bitstream's state and contents.
@@ -875,11 +874,10 @@ class Overlay(PL):
         # Reset the PL clocks
         tcl_name = _get_tcl_name(self.bitfile_name)
         clk_dict = _get_clk(tcl_name)
-        clk_manager = Clock()
         for i in range(4):
             div0, div1, enabled = clk_dict[i]
             if enabled:
-                clk_manager.set_fclk(i, div0, div1)
+                Clock.set_fclk(i, div0, div1)
 
     def is_loaded(self):
         """This method checks whether a bitstream is loaded.
