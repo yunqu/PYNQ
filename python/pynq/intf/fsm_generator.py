@@ -1,40 +1,36 @@
 #   Copyright (c) 2016, Xilinx, Inc.
 #   All rights reserved.
-# 
-#   Redistribution and use in source and binary forms, with or without 
+#
+#   Redistribution and use in source and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   1.  Redistributions of source code must retain the above copyright notice, 
+#   1.  Redistributions of source code must retain the above copyright notice,
 #       this list of conditions and the following disclaimer.
 #
-#   2.  Redistributions in binary form must reproduce the above copyright 
-#       notice, this list of conditions and the following disclaimer in the 
+#   2.  Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
 #       documentation and/or other materials provided with the distribution.
 #
-#   3.  Neither the name of the copyright holder nor the names of its 
-#       contributors may be used to endorse or promote products derived from 
+#   3.  Neither the name of the copyright holder nor the names of its
+#       contributors may be used to endorse or promote products derived from
 #       this software without specific prior written permission.
 #
 #   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-#   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, 
-#   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR 
-#   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
-#   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
-#   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+#   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+#   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+#   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+#   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
 #   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
-#   OR BUSINESS INTERRUPTION). HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
-#   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
-#   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+#   OR BUSINESS INTERRUPTION). HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-__author__ = "Yun Rock Qu"
-__copyright__ = "Copyright 2017, Xilinx"
-__email__ = "pynq_support@xilinx.com"
-
 
 import os
 from copy import deepcopy
 from math import ceil, log
+import itertools
 import numpy as np
 import pygraphviz as pgv
 from IPython.display import Image, display
@@ -52,6 +48,12 @@ from .intf_const import PATTERN_FREQUENCY_MHZ
 from .intf import request_intf
 from .pattern_analyzer import PatternAnalyzer
 from .waveform import Waveform
+
+
+__author__ = "Yun Rock Qu"
+__copyright__ = "Copyright 2017, Xilinx"
+__email__ = "pynq_support@xilinx.com"
+
 
 ARDUINO_FSMG_PROGRAM = "arduino_intf.bin"
 
@@ -73,6 +75,7 @@ def check_pins(fsm_spec, key):
         if i[1] not in OUTPUT_PIN_MAP:
             raise ValueError("Valid pins should be D0 - D19.")
 
+
 def check_num_bits(num_bits, label, maximum):
     """Check whether the number of bits are still in a valid range.
 
@@ -92,24 +95,26 @@ def check_num_bits(num_bits, label, maximum):
         raise ValueError(f'{label} used more than the maximum number ' +
                          f'({maximum}) of bits allowed.')
 
+
 def check_moore(num_states, num_outputs):
-        """Check whether the specified state machine is a moore machine.
+    """Check whether the specified state machine is a moore machine.
 
-        This method will raise an exception if there are more state outputs
-        than the number of states.
+    This method will raise an exception if there are more state outputs
+    than the number of states.
 
-        Parameters
-        ----------
-        num_states : int
-            The number of bits used for states.
-        num_outputs : int
-            The number of state outputs.
+    Parameters
+    ----------
+    num_states : int
+        The number of bits used for states.
+    num_outputs : int
+        The number of state outputs.
 
-        """
-        if num_states < num_outputs:
-            raise ValueError("Specified FSM is not Moore: " +
-                             "{} states but {} outputs.".format(num_states,
-                                                                num_outputs))
+    """
+    if num_states < num_outputs:
+        raise ValueError("Specified FSM is not Moore: " +
+                         "{} states but {} outputs.".format(num_states,
+                                                            num_outputs))
+
 
 def check_duplicate(fsm_spec, key):
     """Function to check duplicate entries in a nested dictionary.
@@ -137,6 +142,7 @@ def check_duplicate(fsm_spec, key):
         if len(set(entries)) < len(entries):
             raise ValueError('Duplicate entries in {}.'.format(key))
 
+
 def check_pin_conflict(pins1, pins2):
     """Function to check whether there is conflict between input / output pins.
 
@@ -152,7 +158,8 @@ def check_pin_conflict(pins1, pins2):
 
     """
     if not set(pins1).isdisjoint(pins2):
-        raise ValueError('I/O pin conflicts: {} and {}.'.format(pins1,pins2))
+        raise ValueError('I/O pin conflicts: {} and {}.'.format(pins1, pins2))
+
 
 def replace_wildcard(input_list):
     """Method to replace a wildcard `-` in the input values.
@@ -174,18 +181,22 @@ def replace_wildcard(input_list):
 
     """
     if '-' in input_list:
-        zero_list  = ['0' if x == '-' else x for x in input_list]
-        one_list  = ['1' if x == '-' else x for x in input_list]
+        first_occurrence = input_list.index('-')
+        zero_list = input_list[:]
+        zero_list[first_occurrence] = '0'
+        one_list = input_list[:]
+        one_list[first_occurrence] = '1'
         return zero_list, one_list
     else:
         return None, None
+
 
 def expand_transition(transition, input_list):
     """Add new (partially) expanded state transition.
 
     Parameters
     ----------
-    transition: list
+    transition: list 
         Specifies a state transition.
     input_list: list
         List of inputs, where each input is a string.
@@ -200,6 +211,7 @@ def expand_transition(transition, input_list):
     expanded_transition.append(''.join(input_list))
     expanded_transition += transition[1:]
     return expanded_transition
+
 
 def merge_to_length(a, b, length):
     """Merge 2 lists into a specific length.
@@ -234,6 +246,7 @@ def merge_to_length(a, b, length):
             break
     return temp
 
+
 def get_bram_addr_offsets(num_states, num_input_bits):
     """Get address offsets from given number of states and inputs.
 
@@ -264,7 +277,8 @@ def get_bram_addr_offsets(num_states, num_input_bits):
     else:
         index_offset = ceil(log(num_states, 2))
     return index_offset, \
-           [i * 2 ** index_offset for i in range(2 ** num_input_bits)]
+        [i * 2 ** index_offset for i in range(2 ** num_input_bits)]
+
 
 class FSMGenerator:
     """Class for Finite State Machine Generator.
@@ -274,6 +288,7 @@ class FSMGenerator:
 
     fsm_spec = {'inputs': [('reset','D0'), ('direction','D1')],
     'outputs': [('alpha','D3'), ('beta','D4'), ('gamma','D5')],
+    'monitors': [('enable', 'D6')]
     'states': ('S0', 'S1', 'S2', 'S3', 'S4', 'S5'),
     'transitions': [['00', 'S0', 'S1', '000'],
                     ['01', 'S0', 'S5', '000'],
@@ -316,7 +331,9 @@ class FSMGenerator:
     input_pins : list
         List of input pins on Arduino header.
     output_pins : list
-        List of output pin on Arduino header.
+        List of output pins on Arduino header.
+    monitor_pins : list
+        List of monitored pins on Arduino header.
     running : bool
         Flag indicating whether the FSM is currently running.
     use_state_bits : bool
@@ -329,6 +346,7 @@ class FSMGenerator:
         The Waveform object used for Wavedrom display.
 
     """
+
     def __init__(self, if_id, fsm_spec=None,
                  use_analyzer=True, use_state_bits=False):
         """Initialize the FSM generator class.
@@ -380,6 +398,7 @@ class FSMGenerator:
         self.transitions = list()
         self.input_pins = list()
         self.output_pins = list()
+        self.monitor_pins = list()
         self.running = False
         self.use_state_bits = use_state_bits
         self.data_samples = None
@@ -387,6 +406,7 @@ class FSMGenerator:
 
         self._state_names2codes = dict()
         self._state_names2outputs = dict()
+        self._expanded_transitions = list()
         self._encoded_transitions = list()
         self._bram_data = np.zeros(2 ** FSM_BRAM_ADDR_WIDTH, dtype=np.uint32)
 
@@ -425,7 +445,9 @@ class FSMGenerator:
         """
         fsm_spec = deepcopy(fsm_spec_in)
         self.use_state_bits = use_state_bits
-        for key in ['inputs','outputs','states']:
+
+        # The key 'inputs', 'outputs', and 'states' are mandatory
+        for key in ['inputs', 'outputs', 'states']:
             check_duplicate(fsm_spec, key)
 
         self.num_input_bits = len(fsm_spec['inputs'])
@@ -437,15 +459,23 @@ class FSMGenerator:
         self.input_pins = [i[1] for i in fsm_spec['inputs']]
         self.output_pins = [i[1] for i in fsm_spec['outputs']]
 
+        # The key 'monitors' is optional
+        if 'monitors' in fsm_spec:
+            check_duplicate(fsm_spec, 'monitors')
+            self.monitor_pins = [i[1] for i in fsm_spec['monitors']]
+            check_pins(fsm_spec, 'monitors')
+        else:
+            fsm_spec['monitors'] = []
+            self.monitor_pins = []
+
         check_num_bits(self.num_input_bits, 'inputs', FSM_MAX_INPUT_BITS)
         check_num_bits(self.num_output_bits, 'outputs', FSM_MAX_OUTPUT_BITS)
         check_num_bits(self.num_state_bits, 'states', FSM_MAX_STATE_BITS)
         check_num_bits(self.num_input_bits + self.num_state_bits,
                        'states and inputs', FSM_MAX_STATE_INPUT_BITS)
         check_moore(self.num_states, self.num_outputs)
-        check_pins(fsm_spec,'inputs')
-        check_pins(fsm_spec,'outputs')
-
+        check_pins(fsm_spec, 'inputs')
+        check_pins(fsm_spec, 'outputs')
 
         self.state_names = fsm_spec['states']
         self._state_names2codes = {
@@ -455,7 +485,8 @@ class FSMGenerator:
         if self.use_state_bits:
             # Update outputs
             state_pins = list()
-            total_pins_used = self.input_pins[:] + self.output_pins[:]
+            total_pins_used = self.input_pins[:] + self.output_pins[:] + \
+                self.monitor_pins[:]
             num_pins_altered = 0
             for bit in range(self.num_state_bits):
                 output_bit_name = 'state_bit' + str(bit)
@@ -474,13 +505,14 @@ class FSMGenerator:
             fsm_spec['outputs'] += state_pins
 
             # Update transitions
-            for index,row in enumerate(fsm_spec['transitions']):
-                _,current_state,_,old_output = row
+            for index, row in enumerate(fsm_spec['transitions']):
+                _, current_state, _, old_output = row
                 if old_output:
                     current_state_code = self._state_names2codes[current_state]
-                    new_output = ''.join(merge_to_length(list(old_output),
-                                    list(current_state_code),
-                                    20 - self.num_input_bits))
+                    new_output = ''.join(merge_to_length(
+                                            list(old_output),
+                                            list(current_state_code),
+                                            20 - self.num_input_bits))
                     fsm_spec['transitions'][index][-1] = new_output
 
             # Update all the attributes related to outputs and transitions
@@ -489,24 +521,28 @@ class FSMGenerator:
             self.num_output_bits = len(fsm_spec['outputs'])
             self.output_pins = [i[1] for i in fsm_spec['outputs']]
 
-
         self._state_names2outputs = {
             state_name: row[3] for row in fsm_spec['transitions']
             for state_name in fsm_spec['states'] if state_name == row[1]}
-        self.transitions = self.expand_all_transitions(fsm_spec['transitions'])
+        self.transitions, self._expanded_transitions = \
+            self.expand_all_transitions(fsm_spec['transitions'])
         self._encoded_transitions = [[i[0],
-                                     self._state_names2codes[i[1]],
-                                     self._state_names2codes[i[2]],
-                                     i[3]] for i in self.transitions]
+                                      self._state_names2codes[i[1]],
+                                      self._state_names2codes[i[2]],
+                                      i[3]]
+                                     for i in self._expanded_transitions]
         self.input_pins = [i[1] for i in fsm_spec['inputs']]
         self.output_pins = [i[1] for i in fsm_spec['outputs']]
         check_pin_conflict(self.input_pins, self.output_pins)
+        check_pin_conflict(self.input_pins, self.monitor_pins)
+        check_pin_conflict(self.monitor_pins, self.output_pins)
 
         waveform_dict = {'signal': [
             ['analysis']],
             'foot': {'tock': 1},
             'head': {'tick': 1, 'text': 'Finite State Machine'}}
-        for name, pin in fsm_spec['inputs'] + fsm_spec['outputs']:
+        for name, pin in (fsm_spec['inputs'] + fsm_spec['outputs'] +
+                          fsm_spec['monitors']):
             waveform_dict['signal'][0].append({'name': name, 'pin': pin})
         self.waveform = Waveform(waveform_dict, analysis_name='analysis')
 
@@ -528,38 +564,43 @@ class FSMGenerator:
 
         Returns
         -------
-        list
-            New list of expanded state transitions.
+        list,list
+            First list has all the state wildcards '*' expanded; second list
+            has the state wildcards '*' and input wildcards '-' both
+            expanded.
 
         """
         # Expand the states first
-        transitions_copy = deepcopy(transitions)
-        for index, row in enumerate(transitions_copy):
+        transitions_copy1 = deepcopy(transitions)
+        for index, row in enumerate(transitions_copy1):
             if row[1] == '*':
                 for state_name in self.state_names:
                     if row[2] != state_name:
-                        new_row = deepcopy(transitions_copy[index])
+                        new_row = deepcopy(transitions_copy1[index])
                         new_row[1] = state_name
                         new_row[3] = self._state_names2outputs[state_name]
-                        transitions_copy.append(new_row)
-        transitions_copy = [row for row in transitions_copy
-                           if '*' not in row[1]]
+                        transitions_copy1.append(new_row)
+        transitions_copy1 = [row for row in transitions_copy1
+                             if '*' not in row[1]]
 
         # Expand the input values
-        for index, row in enumerate(transitions_copy):
+        transitions_copy2 = deepcopy(transitions_copy1)
+        for index, row in enumerate(transitions_copy2):
             input_list = list(row[0])
             wildcard = '-'
             if wildcard in input_list:
                 zero_list, one_list = replace_wildcard(input_list)
                 if zero_list:
-                    new_row = deepcopy(transitions_copy[index])
-                    transitions_copy.append(expand_transition(new_row,
-                                                            zero_list))
-                    transitions_copy.append(expand_transition(new_row,
-                                                            one_list))
-        expanded_transitions = [row for row in transitions_copy
-                                if '-' not in row[0]]
-        return expanded_transitions
+                    new_row = deepcopy(transitions_copy2[index])
+                    transitions_copy2.append(expand_transition(new_row,
+                                                               zero_list))
+                    transitions_copy2.append(expand_transition(new_row,
+                                                               one_list))
+        expanded_transitions = list()
+        for row in transitions_copy2:
+            if '-' not in row[0] and row not in expanded_transitions:
+                expanded_transitions.append(row)
+        return transitions_copy1, expanded_transitions
 
     def load_bram_data(self):
         """Load the BRAM data into the main memory.
@@ -584,9 +625,10 @@ class FSMGenerator:
         # Load default values into BRAM data
         for input_value, offset_addr in enumerate(addr_offsets):
             for state_name in self.state_names:
-                output_value = int(self._state_names2outputs[state_name],2)
+                output_value = int(''.join(list(
+                            self._state_names2outputs[state_name])[::-1]), 2)
                 next_state_code = current_state_code = \
-                    int(self._state_names2codes[state_name],2)
+                    int(self._state_names2codes[state_name], 2)
                 self._bram_data[offset_addr + current_state_code] = \
                     (output_value << FSM_MAX_STATE_INPUT_BITS) + \
                     next_state_code
@@ -596,9 +638,9 @@ class FSMGenerator:
             for transition in self._encoded_transitions:
                 if input_value == int(transition[0], 2):
                     current_state_code, next_state_code, output_value = \
-                            int(transition[1], 2),\
-                            int(transition[2], 2),\
-                            int(transition[3], 2)
+                        int(transition[1], 2),\
+                        int(transition[2], 2),\
+                        int(''.join(list(transition[3])[::-1]), 2)
                     self._bram_data[offset_addr + current_state_code] = \
                         (output_value << FSM_MAX_STATE_INPUT_BITS) + \
                         next_state_code
@@ -625,18 +667,19 @@ class FSMGenerator:
         # Load BRAM data into the main memory
         self.load_bram_data()
         bram_data_addr = self.intf.allocate_buffer('bram_data_buf',
-                                    2 ** FSM_BRAM_ADDR_WIDTH,
-                                    data_type='unsigned int')
+                                                   2 ** FSM_BRAM_ADDR_WIDTH,
+                                                   data_type='unsigned int')
         trace_data_addr = self.intf.allocate_buffer('trace_data_buf',
-                                    num_samples,
-                                    data_type='unsigned long long')
+                                                    num_samples,
+                                                    data_type='unsigned' +
+                                                              ' long long')
         for index, data in enumerate(self._bram_data):
             self.intf.buffers['bram_data_buf'][index] = data
 
         # Setup configurations
         config = list()
-        index_offset,_ = get_bram_addr_offsets(self.num_states,
-                                               self.num_input_bits)
+        index_offset, _ = get_bram_addr_offsets(self.num_states,
+                                                self.num_input_bits)
 
         # Configuration for bit 8,7,6,5 (slvreg 0)
         config_shared_pins = 0x1f1f1f1f
@@ -644,11 +687,12 @@ class FSMGenerator:
         if 5 <= index_offset <= 8:
             for i in range(shared_input_bits):
                 config_shared_pins = ((config_shared_pins << 8) +
-                              (0x80 + OUTPUT_PIN_MAP[self.input_pins[i]])) & \
-                                     0xffffffff
+                                      (0x80 + OUTPUT_PIN_MAP[
+                                          self.input_pins[i]])) & \
+                                      0xffffffff
             for i in range(5, index_offset):
                 config_shared_pins = ((config_shared_pins << 8) + 0x1f) & \
-                                     0xffffffff
+                    0xffffffff
         config.append(config_shared_pins)
 
         # Configuration for bit 12,11,10,9 (slvreg 1)
@@ -658,32 +702,33 @@ class FSMGenerator:
                 dedicated_input_bits = self.num_input_bits - shared_input_bits
                 for i in range(dedicated_input_bits):
                     config_input_pins = ((config_input_pins << 8) +
-                                (0x80 + OUTPUT_PIN_MAP[
-                                    self.input_pins[i+shared_input_bits]])) & \
+                                         (0x80 + OUTPUT_PIN_MAP[
+                                             self.input_pins[
+                                                 i + shared_input_bits]])) & \
                                         0xffffffff
         config.append(config_input_pins)
 
         # Configuration for bit 31 - 13 (slvreg 6,5,4,3,2)
-        fully_used_reg, remaining_pins = divmod(self.num_output_bits,4)
+        fully_used_reg, remaining_pins = divmod(self.num_output_bits, 4)
         assigned_output_pins = 0
         for j in range(fully_used_reg):
             config_output_pins = 0x0
-            for i in range(4):
+            for i in range(3, -1, -1):
                 config_output_pins = ((config_output_pins << 8) +
-                            OUTPUT_PIN_MAP[
-                                self.output_pins[i+assigned_output_pins]]) & \
-                                     0xffffffff
+                                      OUTPUT_PIN_MAP[
+                    self.output_pins[i + assigned_output_pins]]) & \
+                    0xffffffff
             assigned_output_pins += 4
             config.append(config_output_pins)
 
         for j in range(fully_used_reg, 5):
             config_output_pins = 0x0
-            if j==0:
-                for i in range(remaining_pins):
+            if j == fully_used_reg:
+                for i in range(remaining_pins-1, -1, -1):
                     config_output_pins = ((config_output_pins << 8) +
-                            OUTPUT_PIN_MAP[
-                                self.output_pins[i+assigned_output_pins]]) & \
-                                         0xffffffff
+                                          OUTPUT_PIN_MAP[
+                        self.output_pins[i + assigned_output_pins]]) & \
+                        0xffffffff
                 assigned_output_pins += remaining_pins
             config.append(config_output_pins)
 
@@ -712,7 +757,7 @@ class FSMGenerator:
         # Construct the numpy array from the destination buffer
         if self.analyzer:
             self.data_samples = self.intf.ndarray_from_buffer(
-                            'trace_data_buf', num_samples * 8, dtype=np.uint64)
+                'trace_data_buf', num_samples * 8, dtype=np.uint64)
             analysis_group = self.analyzer.analyze(self.data_samples)
             self.waveform.update('analysis', analysis_group)
 
@@ -758,10 +803,11 @@ class FSMGenerator:
         else:
             self.intf.clk.fclk1_mhz = frequency_mhz
             trace_data_addr = self.intf.allocate_buffer('trace_data_buf',
-                                        num_samples,
-                                        data_type='unsigned long long')
+                                                        num_samples,
+                                                        data_type='unsigned' +
+                                                                  ' long long')
 
-            self.intf.write_control([trace_data_addr,num_samples])
+            self.intf.write_control([trace_data_addr, num_samples])
             self.intf.write_command(CMD_TRACE_FSM_ONLY)
 
             if self.analyzer:
@@ -772,7 +818,7 @@ class FSMGenerator:
 
             self.intf.free_buffer('trace_data_buf')
 
-    def display(self,file_name='fsm_spec.png'):
+    def display(self, file_name='fsm_spec.png'):
         """Display the state machine in Jupyter notebook.
 
         This method uses the installed package `pygraphviz`. References:
@@ -791,20 +837,19 @@ class FSMGenerator:
             f.write("digraph {\n" +
                     "    graph [fontsize=10 splines=true overlap=false]\n" +
                     "    edge  [fontsize=10 fontname=\"helvetica\"]\n" +
-                    "    node  [fontsize=10 fontname=\"helvetica\""+
+                    "    node  [fontsize=10 fontname=\"helvetica\"" +
                     " nodesep=2.0]\n" +
                     "    ratio=auto\n")
-            for i in self._state_names2codes:
+            for i in self._state_names2outputs:
                 f.write(('    \"' + i + ' &#8260; ' +
-                         self._state_names2codes[i]) + '\"\n')
+                         self._state_names2outputs[i]) + '\"\n')
             for row in self.transitions:
                 f.write(
                     '    \"' + row[1] + ' &#8260; ' +
-                    self._state_names2codes[row[1]] + '\" -> \"' +
+                    self._state_names2outputs[row[1]] + '\" -> \"' +
                     row[2] + ' &#8260; ' +
-                    self._state_names2codes[row[2]] + "\" [label=\"" +
-                    row[0] + " &#8260; " +
-                    row[3] + "\" arrowhead = \"vee\"]\n")
+                    self._state_names2outputs[row[2]] + "\" [label=\"" +
+                    row[0] + "\" arrowhead = \"vee\"]\n")
             f.write("}")
 
         graph = pgv.AGraph('fsm_spec.dot')

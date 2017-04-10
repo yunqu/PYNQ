@@ -1,35 +1,35 @@
 #   Copyright (c) 2016, Xilinx, Inc.
 #   All rights reserved.
-# 
-#   Redistribution and use in source and binary forms, with or without 
+#
+#   Redistribution and use in source and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   1.  Redistributions of source code must retain the above copyright notice, 
+#   1.  Redistributions of source code must retain the above copyright notice,
 #       this list of conditions and the following disclaimer.
 #
-#   2.  Redistributions in binary form must reproduce the above copyright 
-#       notice, this list of conditions and the following disclaimer in the 
+#   2.  Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
 #       documentation and/or other materials provided with the distribution.
 #
-#   3.  Neither the name of the copyright holder nor the names of its 
-#       contributors may be used to endorse or promote products derived from 
+#   3.  Neither the name of the copyright holder nor the names of its
+#       contributors may be used to endorse or promote products derived from
 #       this software without specific prior written permission.
 #
 #   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-#   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, 
-#   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR 
-#   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
-#   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
-#   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+#   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+#   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+#   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+#   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
 #   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
-#   OR BUSINESS INTERRUPTION). HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
-#   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
-#   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+#   OR BUSINESS INTERRUPTION). HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__author__      = "Yun Rock Qu"
-__copyright__   = "Copyright 2016, Xilinx"
-__email__       = "yunq@xilinx.com"
+__author__ = "Yun Rock Qu"
+__copyright__ = "Copyright 2016, Xilinx"
+__email__ = "yunq@xilinx.com"
 
 
 import os
@@ -42,6 +42,7 @@ from pynq import PL
 from pynq import Clocks
 from pynq import Xlnk
 from pynq.intf import intf_const
+
 
 class _INTF:
     """This class controls the digital interface instances in the system.
@@ -76,7 +77,7 @@ class _INTF:
 
     def __init__(self, ip_name, addr_base, addr_range, gpio_uix, mb_program):
         """Create a new interface object.
-        
+
         Parameters
         ----------
         ip_name : str
@@ -89,7 +90,7 @@ class _INTF:
             The user index of the GPIO, starting from 0.
         mb_program : str
             The Microblaze program loaded for the interface.
-        
+
         """
         self.ip_name = ip_name
         self.mb_program = intf_const.BIN_LOCATION + mb_program
@@ -100,49 +101,49 @@ class _INTF:
         self.buf_manager = Xlnk()
         self.buffers = dict()
         self.program()
-        
+
     def start(self):
         """Start the Microblaze of the current interface.
-        
+
         This method will update the status of the interface.
-        
+
         Returns
         -------
         None
-        
+
         """
         self.state = 'RUNNING'
         self.gpio.write(0)
-        
+
     def stop(self):
         """Stop the Microblaze of the current interface.
-        
+
         This method will update the status of the interface.
-        
+
         Returns
         -------
         None
-        
+
         """
         self.state = 'STOPPED'
         self.gpio.write(1)
-        
+
     def program(self):
         """This method programs the Microblaze of the interface.
-        
+
         This method is called in __init__(); it can also be called after that.
         It uses the attribute "self.mb_program" to program the Microblaze.
-        
+
         Returns
         -------
         None
-        
+
         """
         self.stop()
         PL.load_ip_data(self.ip_name, self.mb_program)
         self.start()
 
-    def write_control(self,ctrl_parameters):
+    def write_control(self, ctrl_parameters):
         """This method writes control parameters to the Microblaze.
 
         Parameters
@@ -155,8 +156,8 @@ class _INTF:
         None
 
         """
-        for i,j in enumerate(ctrl_parameters):
-            self.mmio.write(intf_const.MAILBOX_OFFSET+4*i, j)
+        for i, j in enumerate(ctrl_parameters):
+            self.mmio.write(intf_const.MAILBOX_OFFSET + 4 * i, j)
 
     def write_command(self, command):
         """This method writes the commands to the Microblaze.
@@ -195,6 +196,8 @@ class _INTF:
             The name of the string, used for indexing the buffers.
         num_samples : int
             The number of samples that needs to be generated or captured.
+        data_type : str
+            The type of the data.
 
         Returns
         -------
@@ -271,12 +274,12 @@ class _INTF:
 
 def request_intf(if_id, mb_program):
     """This is the interface to request an I/O Processor.
-    
+
     It looks for active instances on the same interface ID, and prevents
     users from instantiating different types of interfaces on the same ID.
     Users are notified with an exception if the selected interface is already 
     hooked to another type of interface, to prevent unwanted behavior.
-    
+
     Two cases:
     1.  No previous interface in the system with the same ID, or users want to
     request another instance with the same program. 
@@ -289,30 +292,30 @@ def request_intf(if_id, mb_program):
     ----
     When an interface is already in the system with the same interface ID, 
     users are in danger of losing the old instances.
-    
+
     For bitstream `interface.bit`, the interface IDs are
     {1, 2, 3} <=> {PMODA, PMODB, ARDUINO}.
     For different bitstreams, this mapping can be different.
-    
+
     Parameters
     ----------
     if_id : int
         Interface ID (1, 2, 3) corresponding to (PMODA, PMODB, ARDUINO).
     mb_program : str
         Program to be loaded on the interface controller.
-    
+
     Returns
     -------
     _INTF
         An _INTF object with the updated Microblaze program.
-        
+
     Raises
     ------
     ValueError
         When the INTF name or the GPIO name cannot be found in the PL.
     LookupError
         When another INTF is in the system with the same interface ID.
-        
+
     """
     ip_dict = PL.ip_dict
     gpio_dict = PL.gpio_dict
@@ -335,5 +338,5 @@ def request_intf(if_id, mb_program):
         return _INTF(dif, addr_base, addr_range, gpio_uix, mb_program)
     else:
         # case 2
-        raise LookupError('Another INTF program {} already running.' \
+        raise LookupError('Another INTF program {} already running.'
                           .format(ip_state))

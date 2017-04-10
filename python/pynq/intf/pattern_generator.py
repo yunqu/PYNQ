@@ -1,30 +1,30 @@
 #   Copyright (c) 2016, Xilinx, Inc.
 #   All rights reserved.
-# 
-#   Redistribution and use in source and binary forms, with or without 
+#
+#   Redistribution and use in source and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   1.  Redistributions of source code must retain the above copyright notice, 
+#   1.  Redistributions of source code must retain the above copyright notice,
 #       this list of conditions and the following disclaimer.
 #
-#   2.  Redistributions in binary form must reproduce the above copyright 
-#       notice, this list of conditions and the following disclaimer in the 
+#   2.  Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
 #       documentation and/or other materials provided with the distribution.
 #
-#   3.  Neither the name of the copyright holder nor the names of its 
-#       contributors may be used to endorse or promote products derived from 
+#   3.  Neither the name of the copyright holder nor the names of its
+#       contributors may be used to endorse or promote products derived from
 #       this software without specific prior written permission.
 #
 #   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-#   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, 
-#   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR 
-#   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
-#   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
-#   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+#   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+#   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+#   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+#   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
 #   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
-#   OR BUSINESS INTERRUPTION). HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
-#   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
-#   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+#   OR BUSINESS INTERRUPTION). HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 __author__ = "Yun Rock Qu"
@@ -51,6 +51,7 @@ from .pattern_analyzer import PatternAnalyzer
 
 ARDUINO_PG_PROGRAM = "arduino_intf.bin"
 
+
 def _wave_to_bitstring(wave):
     """Function to convert a pattern consisting of `l`, `h`, and dot to a
     sequence of `0` and `1`.
@@ -67,11 +68,13 @@ def _wave_to_bitstring(wave):
 
     """
     substitution_map = {'l': '0', 'h': '1'}
+
     def delete_dots(match):
         return substitution_map[match.group()[0]] * len(match.group())
 
     wave_regex = re.compile(r'[l]\.*|[h]\.*')
     return re.sub(wave_regex, delete_dots, wave)
+
 
 def _bitstring_to_int(bitstring):
     """Function to convert a bit string to integer list.
@@ -90,7 +93,8 @@ def _bitstring_to_int(bitstring):
         A list of elements, each element being 0 or 1.
 
     """
-    return [int(i,10) for i in list(bitstring)]
+    return [int(i, 10) for i in list(bitstring)]
+
 
 def _int_to_sample(bits):
     """Function to convert a bit list into a multi-bit sample.
@@ -228,11 +232,11 @@ class PatternGenerator:
         """
         if self._is_wave_length_equal():
             return self.stimulus_names[0],\
-                   len(self.stimulus_waves[0])
+                len(self.stimulus_waves[0])
         else:
             max_wave_length = 0
             name_of_longest_wave = ''
-            for index,wave in enumerate(self.stimulus_waves):
+            for index, wave in enumerate(self.stimulus_waves):
                 if len(wave) > max_wave_length:
                     max_wave_length = len(wave)
                     name_of_longest_wave = self.stimulus_names[index]
@@ -257,8 +261,8 @@ class PatternGenerator:
             len_diff = self._max_wave_length - len(wave)
             if len_diff:
                 self.stimulus_waves[index] = wave + wave[-1] * len_diff
-                print(f"WaveLane {self.stimulus_names[index]} extended to "+
-                      f"{self._max_wave_length} tokens to match "+
+                print(f"WaveLane {self.stimulus_names[index]} extended to " +
+                      f"{self._max_wave_length} tokens to match " +
                       f"{self._longest_wave}, " +
                       f"the longest WaveLane in the group.")
 
@@ -267,7 +271,7 @@ class PatternGenerator:
 
         Generates a bit pattern for a single shot operation at specified IO 
         pins with the specified number of samples.
-        
+
         Each bit of the 20-bit patterns, from LSB to MSB, corresponds to:
         D0, D1, ..., D19, A0, A1, ..., A5, respectively.
 
@@ -276,7 +280,7 @@ class PatternGenerator:
 
         Users can ignore the returned data in case only the pattern
         generator is required.
-        
+
         Parameters
         ----------
         frequency_mhz: float
@@ -299,14 +303,14 @@ class PatternGenerator:
             pin_number = OUTPUT_PIN_MAP[self.stimulus_pins[index]]
             direction_mask &= (~(1 << pin_number))
             temp_lanes[pin_number] = data[index] = _bitstring_to_int(
-                                                    _wave_to_bitstring(wave))
+                _wave_to_bitstring(wave))
         temp_samples = temp_lanes.T.copy()
-        self.src_samples = np.apply_along_axis(_int_to_sample,1,temp_samples)
+        self.src_samples = np.apply_along_axis(_int_to_sample, 1, temp_samples)
 
         # Allocate the source and destination buffers
-        src_addr = self.intf.allocate_buffer('src_buf',num_samples,
+        src_addr = self.intf.allocate_buffer('src_buf', num_samples,
                                              data_type="unsigned int")
-        dst_addr = self.intf.allocate_buffer('dst_buf',num_samples,
+        dst_addr = self.intf.allocate_buffer('dst_buf', num_samples,
                                              data_type="unsigned long long")
 
         # Write samples into the source buffer
@@ -314,13 +318,14 @@ class PatternGenerator:
             self.intf.buffers['src_buf'][index] = data
 
         # Wait for the interface processor to return control
-        self.intf.write_control([direction_mask,src_addr,num_samples,dst_addr])
+        self.intf.write_control(
+            [direction_mask, src_addr, num_samples, dst_addr])
         self.intf.write_command(CMD_GENERATE_PATTERN_SINGLE)
 
         # Construct the numpy array from the destination buffer
         if self.analyzer:
             self.dst_samples = self.intf.ndarray_from_buffer(
-                                    'dst_buf',num_samples*8,dtype=np.uint64)
+                'dst_buf', num_samples * 8, dtype=np.uint64)
             self.analysis_group = self.analyzer.analyze(self.dst_samples)
             self.waveform.update(self.analysis_name, self.analysis_group)
 

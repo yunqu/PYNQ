@@ -151,7 +151,7 @@ class Waveform:
                          os.path.dirname(os.path.realpath(__file__)) +
                          '/js ./'):
                 raise RuntimeError('Cannot copy WaveDrom javascripts.')
-        
+
         data = self.waveform_dict
         htmldata = '<script type="WaveDrom">' + json.dumps(data) + '</script>'
         IPython.core.display.display_html(IPython.core.display.HTML(htmldata))
@@ -396,7 +396,7 @@ class Waveform:
             valid_pins = INPUT_PIN_MAP
         else:
             raise KeyError("Valid group names are {},{}.".format(
-                            self.stimulus, self.analysis))
+                self.stimulus, self.analysis))
 
         lane_group = self._get_wavelane_group(group_name)
         pin_labels = set()
@@ -404,7 +404,7 @@ class Waveform:
         for lane in lane_group:
             # Verify that each pin label maps to an external pin
             if lane['pin'] not in valid_pins:
-                raise ValueError("Pin label {} in Lane {} is invalid."\
+                raise ValueError("Pin label {} in Lane {} is invalid."
                                  .format(lane['pin'], lane['name']))
 
             # Verify the wave tokens

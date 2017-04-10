@@ -35,7 +35,7 @@ __copyright__ = "Copyright 2017, Xilinx"
 __email__ = "pynq_support@xilinx.com"
 
 
-def _get_reg_value(addr,bit_offset,bit_width):
+def _get_reg_value(addr, bit_offset, bit_width):
     """Return register value at the given address.
 
     Parameters
@@ -96,6 +96,7 @@ def _set_reg_value(addr, bit_offset, bit_width, value):
     rst_val = register.read() & mask0
     register.write(0, rst_val | bit_val)
 
+
 def _get_2_divisors(freq_high, freq_desired, reg0_width, reg1_width):
     """Return 2 divisors of the specified width for frequency divider.
 
@@ -118,18 +119,19 @@ def _get_2_divisors(freq_high, freq_desired, reg0_width, reg1_width):
         A pair of 2 divisors, each of 6 bits at most.
 
     """
-    max_val0 = 1<<reg0_width
-    max_val1 = 1<<reg1_width
-    q0 = round(freq_high/freq_desired)
+    max_val0 = 1 << reg0_width
+    max_val1 = 1 << reg1_width
+    q0 = round(freq_high / freq_desired)
     bound = min(int(q0 / 2), max_val0)
-    for i in range(1,bound):
-        q1,r1 = divmod(q0,i)
-        if i<max_val0-1 and q1>max_val1-1:
+    for i in range(1, bound):
+        q1, r1 = divmod(q0, i)
+        if i < max_val0 - 1 and q1 > max_val1 - 1:
             continue
         if r1 == 0:
-            return i,q1
+            return i, q1
         if i == bound - 1:
             raise ValueError("Not possible to get the desired frequency.")
+
 
 arm_pll_fdiv = _get_reg_value(general_const.SCLR_BASE_ADDRESS +
                               general_const.ARM_PLL_DIV_OFFSET,
@@ -152,6 +154,7 @@ arm_clk_div = _get_reg_value(general_const.SCLR_BASE_ADDRESS +
                              general_const.ARM_CLK_DIV_BIT_OFFSET,
                              general_const.ARM_CLK_DIV_BIT_WIDTH)
 
+
 class Clocks_Meta(type):
     """Meta class for all the PS and PL clocks not exposed to users.
 
@@ -159,6 +162,7 @@ class Clocks_Meta(type):
     are exposed to users. Users should use the class `Clocks` instead.
 
     """
+
     @property
     def cpu_mhz(cls):
         """The getter method for CPU clock.
@@ -166,17 +170,17 @@ class Clocks_Meta(type):
         The returned clock rate is measured in MHz.
 
         """
-        if arm_clk_sel in [0,1]:
+        if arm_clk_sel in [0, 1]:
             arm_clk_mult = arm_pll_fdiv
         elif arm_clk_sel == 2:
             arm_clk_mult = ddr_pll_fdiv
         else:
             arm_clk_mult = io_pll_fdiv
         return round(general_const.SRC_CLK_MHZ *
-                             arm_clk_mult / arm_clk_div, 6)
+                     arm_clk_mult / arm_clk_div, 6)
 
     @cpu_mhz.setter
-    def cpu_mhz(cls,clk_mhz):
+    def cpu_mhz(cls, clk_mhz):
         """The setter method for CPU clock.
 
         Since the CPU clock should not be changed, setting it will raise
@@ -184,7 +188,7 @@ class Clocks_Meta(type):
 
         """
         raise RuntimeError("Not allowed to change CPU clock.")
-    
+
     @property
     def fclk0_mhz(cls):
         """The getter method for PL clock 0.
@@ -423,7 +427,7 @@ class Clocks_Meta(type):
                                          general_const.CLK_DIV0_BIT_WIDTH,
                                          general_const.CLK_DIV1_BIT_WIDTH)
         elif div0 is not None and div1 is None:
-            div1 = round(max_clk_mhz/ clk_mhz / div0)
+            div1 = round(max_clk_mhz / clk_mhz / div0)
         elif div1 is not None and div0 is None:
             div0 = round(max_clk_mhz / clk_mhz / div1)
 
@@ -440,6 +444,7 @@ class Clocks_Meta(type):
                        general_const.CLK_CTRL_REG_OFFSET[clk_idx],
                        general_const.CLK_DIV1_BIT_OFFSET,
                        general_const.CLK_DIV1_BIT_WIDTH, div1)
+
 
 class Clocks(metaclass=Clocks_Meta):
     """Class for all the PS and PL clocks exposed to users.
@@ -461,6 +466,7 @@ class Clocks(metaclass=Clocks_Meta):
         The clock rate of the PL clock 3, measured in MHz.
 
     """
+
     def __init__(self):
         """Return a new PL object.
 
