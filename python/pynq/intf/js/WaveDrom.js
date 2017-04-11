@@ -1378,7 +1378,6 @@ WaveDrom.RenderWaveForm = function (index) {
 	}
 };
 
-/*
 WaveDrom.AppendSaveAsDialog =  function (index) {
 	var div = document.getElementById('WaveDrom_Display_' + index);
 	div.childNodes[0].addEventListener('contextmenu', function(e) {
@@ -1449,10 +1448,10 @@ WaveDrom.AppendSaveAsDialog =  function (index) {
 			document.body.removeEventListener('mousedown', closeMenu, false);
 		}, false);
 		
-		saveJson.addEventListener('click', function(e) {
+		/*saveJson.addEventListener('click', function(e) {
 			menu.parentNode.removeChild(menu);
 			document.body.removeEventListener('mousedown', closeMenu, false);
-		}, false);
+		}, false);*/
 		
 		menu.addEventListener('contextmenu', function(e) { e.preventDefault(); }, false);
 		
@@ -1470,7 +1469,6 @@ WaveDrom.AppendSaveAsDialog =  function (index) {
 		e.preventDefault();
 	}, false);
 }
-*/
 
 WaveDrom.ProcessAll = function () {
 	"use strict";
@@ -1498,7 +1496,6 @@ WaveDrom.ProcessAll = function () {
 	document.head.innerHTML += '<style type="text/css">div.wavedromMenu{position:fixed;border:solid 1pt#CCCCCC;background-color:white;box-shadow:0px 10px 20px #808080;cursor:default;margin:0px;padding:0px;}div.wavedromMenu>ul{margin:0px;padding:0px;}div.wavedromMenu>ul>li{padding:2px 10px;list-style:none;}div.wavedromMenu>ul>li:hover{background-color:#b5d5ff;}</style>';
 };
 
-/*
 WaveDrom.EditorRefresh = function () {
 	"use strict";
 	var svg, ser, ssvg, asvg, sjson, ajson;
@@ -1518,4 +1515,3 @@ WaveDrom.EditorRefresh = function () {
 	ajson = document.getElementById("download_json");
 	ajson.href = 'data:text/json;base64,' + window.btoa(sjson);
 };
-*/
