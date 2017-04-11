@@ -27,10 +27,6 @@
 #   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__author__ = "Yun Rock Qu"
-__copyright__ = "Copyright 2017, Xilinx"
-__email__ = "pynq_support@xilinx.com"
-
 import os
 import re
 from pyeda.inter import exprvar
@@ -39,6 +35,12 @@ from .intf_const import ARDUINO
 from .intf_const import CMD_GENERATE_DEFAULT_BOOLEAN
 from .intf_const import CMD_GENERATE_USER_BOOLEAN
 from .intf import request_intf
+
+
+__author__ = "Yun Rock Qu"
+__copyright__ = "Copyright 2017, Xilinx"
+__email__ = "pynq_support@xilinx.com"
+
 
 IN_PINS = [['D0', 'D1', 'D2', 'D3'],
            ['D5', 'D6', 'D7', 'D8'],

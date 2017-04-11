@@ -27,17 +27,18 @@
 #   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__author__      = "Giuseppe Natale, Yun Rock Qu"
-__copyright__   = "Copyright 2016, Xilinx"
-__email__       = "pynq_support@xilinx.com"
-
-
 import pytest
 from pynq import Overlay
 from pynq.iop import request_iop
 
-global ol
+
+__author__ = "Giuseppe Natale, Yun Rock Qu"
+__copyright__ = "Copyright 2016, Xilinx"
+__email__ = "pynq_support@xilinx.com"
+
+
 ol = Overlay("base.bit")
+
 
 @pytest.mark.run(order=11)
 def test_request_iop():
@@ -50,13 +51,14 @@ def test_request_iop():
     fixed_id = 1
     exception_raised = False
     try:
-        request_iop(fixed_id,'mailbox.bin')
+        request_iop(fixed_id, 'mailbox.bin')
     except LookupError:
         exception_raised = True
     assert not exception_raised, 'request_iop() should not raise exception.'
     
     ol.reset()
-    
+
+
 @pytest.mark.run(order=12)
 def test_request_iop_same():
     """Test for the _IOP class and the method request_iop().
@@ -68,15 +70,16 @@ def test_request_iop_same():
     """
     fixed_id = 1
     exception_raised = False
-    request_iop(fixed_id,'mailbox.bin')
+    request_iop(fixed_id, 'mailbox.bin')
     try:
-        request_iop(fixed_id,'mailbox.bin')
+        request_iop(fixed_id, 'mailbox.bin')
     except LookupError:
         exception_raised = True
     assert not exception_raised, 'request_iop() should not raise exception.'
     
     ol.reset()
-    
+
+
 @pytest.mark.run(order=13)
 def test_request_iop_conflict():
     """Test for the _IOP class and the method request_iop().
@@ -87,9 +90,7 @@ def test_request_iop_conflict():
     
     """
     fixed_id = 1
-    request_iop(fixed_id,'pmod_adc.bin')
+    request_iop(fixed_id, 'pmod_adc.bin')
     pytest.raises(LookupError, request_iop, fixed_id, 'pmod_dac.bin')
     
     ol.reset()
-    
-

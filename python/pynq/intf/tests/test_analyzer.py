@@ -27,14 +27,15 @@
 #   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import os
-from random import randint
-from math import pow
-from time import sleep
+
+import numpy as np
 import pytest
-from pynq import MMIO
-from pynq import Overlay
-from pynq import general_const
+from pynq.intf.intf_const import OUTPUT_PIN_MAP
+from pynq.intf.intf_const import OUTPUT_SAMPLE_SIZE
+from pynq.intf import PatternAnalyzer
+from pynq.intf.pattern_generator import _bitstring_to_int
+from pynq.intf.pattern_generator import _wave_to_bitstring
+from pynq.intf.pattern_generator import _int_to_sample
 
 
 __author__ = "Yun Rock Qu"
@@ -42,42 +43,40 @@ __copyright__ = "Copyright 2016, Xilinx"
 __email__ = "pynq_support@xilinx.com"
 
 
-@pytest.mark.run(order=4)
-def test_mmio():
-    """Test whether MMIO class is working properly.
+@pytest.mark.run(order=44)
+def test_analyzer():
+    """Test for the PatternAnalyzer class.
     
-    Generate random tests to swipe through the entire range:
-    
-    >>> mmio.write(all offsets, random data)
-    
-    Steps:
-    
-    1. Initialize an instance with length in bytes
-    
-    2. Write an integer to a given offset.
-    
-    3. Write a number within the range [0, 2^32-1] into a 4-byte location.
-    
-    4. Change to the next offset and repeat.
+    Specify a stimulus group, and calculate the samples to be captured.
+    Convert the samples back into wavelanes, and compare the wavelanes with
+    the original wavelanes in the stimulus group. 
     
     """
-    ol = Overlay('base.bit')
+    if_id = 3
+    analyzer = PatternAnalyzer(if_id)
 
-    ol.download()
-    sleep(0.2)
-    mmio_base = ol.ip_dict['mb_bram_ctrl_1']['phys_addr']
-    mmio_range = ol.ip_dict['mb_bram_ctrl_1']['addr_range']
-    mmio = MMIO(mmio_base, mmio_range)
-    for offset in range(0, 100, general_const.MMIO_WORD_LENGTH):
-        data1 = randint(0, pow(2, 32)-1)
-        mmio.write(offset, data1)
-        sleep(0.02)
-        data2 = mmio.read(offset)
-        assert data1 == data2, \
-            'MMIO read back a wrong random value at offset {}.'.format(offset)
-        mmio.write(offset, 0)
-        sleep(0.02)
-        assert mmio.read(offset) == 0, \
-            'MMIO read back a wrong fixed value at offset {}.'.format(offset)
-            
-    del ol
+    stimulus_group = [
+        {'name': 'clk0', 'pin': 'D0', 'wave': 'lh' * 64},
+        {'name': 'clk1', 'pin': 'D1', 'wave': 'l.h.' * 32},
+        {'name': 'clk2', 'pin': 'D2', 'wave': 'l...h...' * 16},
+        {'name': 'clk3', 'pin': 'D3', 'wave': 'l.......h.......' * 8}]
+
+    num_samples = 128
+    temp_lanes = np.zeros((OUTPUT_SAMPLE_SIZE, num_samples),
+                          dtype=np.uint8)
+    for index, wavelane in enumerate(stimulus_group):
+        pin_number = OUTPUT_PIN_MAP[wavelane['pin']]
+        temp_lanes[pin_number] = _bitstring_to_int(
+            _wave_to_bitstring(wavelane['wave']))
+
+    temp_samples = temp_lanes.T.copy()
+    src_samples = np.apply_along_axis(_int_to_sample, 1, temp_samples)
+
+    dst_samples = src_samples.copy()
+    analysis_group = analyzer.analyze(dst_samples)
+
+    for wavelane1 in analysis_group:
+        for wavelane0 in stimulus_group:
+            if wavelane1['pin'] == wavelane0['pin']:
+                assert wavelane1['wave'] == wavelane0['wave'], \
+                    f"Analyzer returns wrong data on {wavelane1['pin']}."

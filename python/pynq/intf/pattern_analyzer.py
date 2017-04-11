@@ -27,10 +27,6 @@
 #   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__author__ = "Yun Rock Qu"
-__copyright__ = "Copyright 2017, Xilinx"
-__email__ = "pynq_support@xilinx.com"
-
 import os
 import re
 import csv
@@ -48,6 +44,12 @@ from .intf_const import TRI_STATE_MAP
 from .intf_const import MAILBOX_PY2DIF_CMD_OFFSET
 from .intf import request_intf
 from .waveform import Waveform
+
+
+__author__ = "Yun Rock Qu"
+__copyright__ = "Copyright 2017, Xilinx"
+__email__ = "pynq_support@xilinx.com"
+
 
 ARDUINO_PG_PROGRAM = "arduino_intf.bin"
 
@@ -113,12 +115,12 @@ class PatternAnalyzer:
         into a Wavedrom compatible format.
 
         Each bit of the 20-bit patterns, from LSB to MSB, corresponds to:
-        D0, D1, ..., D19, A0, A1, ..., A5, respectively.
+        D0, D1, ..., D18 (A4), D19 (A5), respectively.
 
         The data output is of format:
 
-        [{'pin': 'D1', 'wave': '1...0.....'},
-        {'pin': 'D2', 'wave': '0.1..01.01'}]
+        [{'name': '', 'pin': 'D1', 'wave': '1...0.....'},
+         {'name': '', 'pin': 'D2', 'wave': '0.1..01.01'}]
 
         Note the all the lanes should have the same number of samples.
 

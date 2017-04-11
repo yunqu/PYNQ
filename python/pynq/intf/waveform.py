@@ -27,16 +27,16 @@
 #   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__author__ = "Yun Rock Qu"
-__copyright__ = "Copyright 2017, Xilinx"
-__email__ = "pynq_support@xilinx.com"
-
-
 import os
 import json
 import IPython.core.display
 from .intf_const import INPUT_PIN_MAP
 from .intf_const import OUTPUT_PIN_MAP
+
+
+__author__ = "Yun Rock Qu"
+__copyright__ = "Copyright 2017, Xilinx"
+__email__ = "pynq_support@xilinx.com"
 
 
 def _verify_wave_tokens(wave_lane):
@@ -184,7 +184,7 @@ class Waveform:
         for group in self.waveform_dict['signal']:
             if group[0] == group_name:
                 return group[1:]
-        raise KeyError("WaveLane group {} not found.".format(group_name))
+        raise ValueError("WaveLane group {} not found.".format(group_name))
 
     @property
     def stimulus_group(self):
@@ -395,7 +395,7 @@ class Waveform:
         elif group_name == self.analysis:
             valid_pins = INPUT_PIN_MAP
         else:
-            raise KeyError("Valid group names are {},{}.".format(
+            raise ValueError("Valid group names are {},{}.".format(
                 self.stimulus, self.analysis))
 
         lane_group = self._get_wavelane_group(group_name)

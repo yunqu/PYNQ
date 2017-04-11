@@ -27,11 +27,6 @@
 #   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__author__ = "Yun Rock Qu"
-__copyright__ = "Copyright 2016, Xilinx"
-__email__ = "yunq@xilinx.com"
-
-
 import os
 import sys
 import math
@@ -42,6 +37,11 @@ from pynq import PL
 from pynq import Clocks
 from pynq import Xlnk
 from pynq.intf import intf_const
+
+
+__author__ = "Yun Rock Qu"
+__copyright__ = "Copyright 2016, Xilinx"
+__email__ = "yunq@xilinx.com"
 
 
 class _INTF:
@@ -319,8 +319,8 @@ def request_intf(if_id, mb_program):
     """
     ip_dict = PL.ip_dict
     gpio_dict = PL.gpio_dict
-    dif = "SEG_mb_bram_ctrl_" + str(if_id) + "_Mem0"
-    rst_pin = "mb_" + str(if_id) + "_reset"
+    dif = f"mb_bram_ctrl_{if_id}"
+    rst_pin = f"mb_{if_id}_reset"
 
     ip = [k for k, _ in ip_dict.items()]
     gpio = [k for k, _ in gpio_dict.items()]
@@ -330,8 +330,11 @@ def request_intf(if_id, mb_program):
     if rst_pin not in gpio:
         raise ValueError("No such GPIO pin for INTF {}.".format(if_id))
 
-    addr_base, addr_range, ip_state = ip_dict[dif]
-    gpio_uix, _ = gpio_dict[rst_pin]
+    addr_base = ip_dict[dif]['phys_addr']
+    addr_range = ip_dict[dif]['addr_range']
+    ip_state = ip_dict[dif]['state']
+    gpio_uix = gpio_dict[rst_pin]['index']
+
     if (ip_state is None) or \
             (ip_state == (intf_const.BIN_LOCATION + mb_program)):
         # case 1

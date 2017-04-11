@@ -27,11 +27,6 @@
 #   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__author__ = "Yun Rock Qu"
-__copyright__ = "Copyright 2017, Xilinx"
-__email__ = "pynq_support@xilinx.com"
-
-
 # Constants
 from . import intf_const
 from .intf_const import ARDUINO
@@ -43,3 +38,7 @@ from .boolean_generator import BooleanGenerator
 from .pattern_generator import PatternGenerator
 from .pattern_analyzer import PatternAnalyzer
 from .fsm_generator import FSMGenerator
+
+__author__ = "Yun Rock Qu"
+__copyright__ = "Copyright 2017, Xilinx"
+__email__ = "pynq_support@xilinx.com"

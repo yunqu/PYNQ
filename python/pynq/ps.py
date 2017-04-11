@@ -27,74 +27,35 @@
 #   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import numpy as np
+from .general_const import SRC_CLK_MHZ
+from .general_const import DEFAULT_CLK_MHZ
 from .mmio import MMIO
-from . import general_const
+
 
 __author__ = "Yun Rock Qu"
 __copyright__ = "Copyright 2017, Xilinx"
 __email__ = "pynq_support@xilinx.com"
 
 
-def _get_reg_value(addr, bit_offset, bit_width):
-    """Return register value at the given address.
-
-    Parameters
-    ----------
-    addr : int
-        The address of the register.
-    bit_offset : int
-        The offset of bits to get the binary digits.
-    bit_width : int
-        The width of the bits for returned binary digits.
-
-    Returns
-    -------
-    int
-        The register value at the given address and bit offset.
-
-    """
-    if bit_offset not in range(32):
-        raise ValueError("Bit starting offset should be 0 - 31.")
-    if bit_width not in range(32):
-        raise ValueError("Bit width should be 0 - 31.")
-    if (bit_offset + bit_width) not in range(32):
-        raise ValueError("Bit ending offset should be 0 - 31.")
-
-    mask = int('1' * bit_width, 2) << bit_offset
-    cur_val = MMIO(addr).read()
-    return (cur_val & mask) >> bit_offset
-
-
-def _set_reg_value(addr, bit_offset, bit_width, value):
-    """Set register value at the given address.
-
-    This method does read-modify-write to set the register value.
-
-    Parameters
-    ----------
-    addr : int
-        The address of the register.
-    bit_offset : int
-        The offset of bits to set the binary digits.
-    bit_width : int
-        The width of the bits to set binary digits.
-    value : int
-        The integer value to write into the register.
-
-    """
-    if bit_offset not in range(32):
-        raise ValueError("Bit starting offset should be 0 - 31.")
-    if bit_width not in range(32):
-        raise ValueError("Bit width should be 0 - 31.")
-    if (bit_offset + bit_width) not in range(32):
-        raise ValueError("Bit ending offset should be 0 - 31.")
-
-    mask1 = int('1' * bit_width, 2)
-    mask0 = ~(mask1 << bit_offset)
-    bit_val = (value & mask1) << bit_offset
-    register = MMIO(addr, 4)
-    rst_val = register.read() & mask0
-    register.write(0, rst_val | bit_val)
+SCLR_BASE_ADDRESS = 0xf8000000
+ARM_PLL_DIV_OFFSET = 0x100
+DDR_PLL_DIV_OFFSET = 0x104
+IO_PLL_DIV_OFFSET = 0x108
+ARM_CLK_REG_OFFSET = 0x120
+CLK_CTRL_REG_OFFSET = [0x170, 0x180, 0x190, 0x1A0]
+PLL_DIV_LSB = 12
+PLL_DIV_MSB = 18
+ARM_CLK_SEL_LSB = 4
+ARM_CLK_SEL_MSB = 5
+ARM_CLK_DIV_LSB = 8
+ARM_CLK_DIV_MSB = 13
+CLK_SRC_LSB = 4
+CLK_SRC_MSB = 5
+CLK_DIV0_LSB = 8
+CLK_DIV0_MSB = 13
+CLK_DIV1_LSB = 20
+CLK_DIV1_MSB = 25
 
 
 def _get_2_divisors(freq_high, freq_desired, reg0_width, reg1_width):
@@ -121,11 +82,11 @@ def _get_2_divisors(freq_high, freq_desired, reg0_width, reg1_width):
     """
     max_val0 = 1 << reg0_width
     max_val1 = 1 << reg1_width
-    q0 = round(freq_high / freq_desired)
+    q0 = round(freq_high/freq_desired)
     bound = min(int(q0 / 2), max_val0)
     for i in range(1, bound):
         q1, r1 = divmod(q0, i)
-        if i < max_val0 - 1 and q1 > max_val1 - 1:
+        if i < max_val0-1 and q1 > max_val1-1:
             continue
         if r1 == 0:
             return i, q1
@@ -133,35 +94,184 @@ def _get_2_divisors(freq_high, freq_desired, reg0_width, reg1_width):
             raise ValueError("Not possible to get the desired frequency.")
 
 
-arm_pll_fdiv = _get_reg_value(general_const.SCLR_BASE_ADDRESS +
-                              general_const.ARM_PLL_DIV_OFFSET,
-                              general_const.PLL_DIV_BIT_OFFSET,
-                              general_const.PLL_DIV_BIT_WIDTH)
-ddr_pll_fdiv = _get_reg_value(general_const.SCLR_BASE_ADDRESS +
-                              general_const.DDR_PLL_DIV_OFFSET,
-                              general_const.PLL_DIV_BIT_OFFSET,
-                              general_const.PLL_DIV_BIT_WIDTH)
-io_pll_fdiv = _get_reg_value(general_const.SCLR_BASE_ADDRESS +
-                             general_const.IO_PLL_DIV_OFFSET,
-                             general_const.PLL_DIV_BIT_OFFSET,
-                             general_const.PLL_DIV_BIT_WIDTH)
-arm_clk_sel = _get_reg_value(general_const.SCLR_BASE_ADDRESS +
-                             general_const.ARM_CLK_REG_OFFSET,
-                             general_const.ARM_CLK_SEL_BIT_OFFSET,
-                             general_const.ARM_CLK_SEL_BIT_WIDTH)
-arm_clk_div = _get_reg_value(general_const.SCLR_BASE_ADDRESS +
-                             general_const.ARM_CLK_REG_OFFSET,
-                             general_const.ARM_CLK_DIV_BIT_OFFSET,
-                             general_const.ARM_CLK_DIV_BIT_WIDTH)
+class Register:
+    """Register class that allows users to access registers easily.
+
+    This class supports register slicing, which makes the access to register
+    values much more easily. Users can either use +1 or -1 as the step when
+    slicing the register. By default, the slice starts from MSB to LSB, which
+    is consistent with the common hardware design practice.
+
+    For example, the following slices are acceptable:
+    reg[31:13] (commonly used), reg[:], reg[3::], reg[:20:], reg[1:3], etc.
+
+    Note
+    ----
+    The slicing endpoints are closed, meaning both of the 2 endpoints will
+    be included in the final returned value. For example, reg[31:0] will 
+    return a 32-bit value; this is consistent with most of the hardware 
+    definitions.
+
+    Attributes
+    ----------
+    address : int
+        The address of the register.
+    width : int
+        The width of the register, e.g., 32 (default) or 64.
+
+    """
+
+    def __init__(self, address, width=32):
+        """Instantiate a register object.
+
+        Parameters
+        ----------
+        address : int
+            The address of the register.
+        width : int
+            The width of the register, e.g., 32 (default) or 64.
+
+        """
+        self.address = address
+        self.width = width
+
+        if width == 32:
+            self._buffer = MMIO(address).array.astype(np.uint32, copy=False)
+        elif width == 64:
+            self._buffer = MMIO(address).array.astype(np.uint64, copy=False)
+        else:
+            raise ValueError("Supported register width is 32 or 64.")
+
+    def __getitem__(self, index):
+        """Get the register value.
+
+        This method accepts both integer index, or slice as input parameters.
+
+        Parameters
+        ----------
+        index : int | slice
+            The integer index, or slice to access the register value.
+
+        """
+        curr_val = int.from_bytes(self._buffer, byteorder='little')
+        if isinstance(index, int):
+            mask = 1 << index
+            return (curr_val & mask) >> index
+        elif isinstance(index, slice):
+            start, stop, step = index.start, index.stop, index.step
+            if step is None or step == -1:
+                if start is None:
+                    start = self.width - 1
+                if stop is None:
+                    stop = 0
+            elif step == 1:
+                if start is None:
+                    start = 0
+                if stop is None:
+                    stop = self.width - 1
+            else:
+                raise ValueError("Slicing step is not valid.")
+            if start not in range(self.width):
+                raise ValueError(f"Slicing endpoint {start} is not in range 0"
+                                 f" - {self.width}.")
+            if stop not in range(self.width):
+                raise ValueError(f"Slicing endpoint {stop} is not in range 0"
+                                 f" - {self.width}.")
+
+            if start >= stop:
+                mask = ((1 << (start - stop + 1)) - 1) << stop
+                return (curr_val & mask) >> stop
+            else:
+                width = stop - start + 1
+                mask = ((1 << width) - 1) << start
+                reg_val = (curr_val & mask) >> start
+                return int('{:0{width}b}'.format(reg_val,
+                                                 width=width)[::-1], 2)
+        else:
+            raise ValueError("Index must be int or slice.")
+
+    def __setitem__(self, index, value):
+        """Set the register value.
+
+        This method accepts both integer index, or slice as input parameters.
+
+        Parameters
+        ----------
+        index : int | slice
+            The integer index, or slice to access the register value.
+
+        """
+        curr_val = int.from_bytes(self._buffer, byteorder='little')
+        if isinstance(index, int):
+            if value != 0 and value != 1:
+                raise ValueError("Value to be set should be either 0 or 1.")
+            mask = 1 << index
+            self._buffer[0] = (curr_val & ~mask) | (value << index)
+        elif isinstance(index, slice):
+            start, stop, step = index.start, index.stop, index.step
+            if step is None or step == -1:
+                if start is None:
+                    start = self.width - 1
+                if stop is None:
+                    stop = 0
+            elif step == 1:
+                if start is None:
+                    start = 0
+                if stop is None:
+                    stop = self.width - 1
+            else:
+                raise ValueError("Slicing step is not valid.")
+            if start not in range(self.width):
+                raise ValueError(f"Slicing endpoint {start} is not in range 0"
+                                 f" - {self.width}.")
+            if stop not in range(self.width):
+                raise ValueError(f"Slicing endpoint {stop} is not in range 0"
+                                 f" - {self.width}.")
+
+            if start >= stop:
+                mask = ((1 << (start - stop + 1)) - 1) << stop
+                self._buffer[0] = (curr_val & ~mask) | (value << stop)
+            else:
+                width = stop - start + 1
+                mask = ((1 << width) - 1) << start
+                reg_val = int('{:0{width}b}'.format(value,
+                                                    width=width)[::-1], 2)
+                self._buffer[0] = (curr_val & ~mask) | (reg_val << start)
+        else:
+            raise ValueError("Index must be int or slice.")
+
+    def __str__(self):
+        """Print the register value.
+
+        This method is overloaded to print the register value. The output 
+        is a string in hex format.
+
+        """
+        curr_val = int.from_bytes(self._buffer, byteorder='little')
+        return hex(curr_val)
 
 
-class Clocks_Meta(type):
+class ClocksMeta(type):
     """Meta class for all the PS and PL clocks not exposed to users.
 
     Since this is the meta class for all the clocks, no attributes or methods
     are exposed to users. Users should use the class `Clocks` instead.
 
     """
+    arm_pll_reg = Register(SCLR_BASE_ADDRESS + ARM_PLL_DIV_OFFSET)
+    ddr_pll_reg = Register(SCLR_BASE_ADDRESS + DDR_PLL_DIV_OFFSET)
+    io_pll_reg = Register(SCLR_BASE_ADDRESS + IO_PLL_DIV_OFFSET)
+    arm_clk_reg = Register(SCLR_BASE_ADDRESS + ARM_CLK_REG_OFFSET)
+    fclk0_reg = Register(SCLR_BASE_ADDRESS + CLK_CTRL_REG_OFFSET[0])
+    fclk1_reg = Register(SCLR_BASE_ADDRESS + CLK_CTRL_REG_OFFSET[1])
+    fclk2_reg = Register(SCLR_BASE_ADDRESS + CLK_CTRL_REG_OFFSET[2])
+    fclk3_reg = Register(SCLR_BASE_ADDRESS + CLK_CTRL_REG_OFFSET[3])
+
+    arm_pll_fdiv = arm_pll_reg[PLL_DIV_MSB:PLL_DIV_LSB]
+    ddr_pll_fdiv = ddr_pll_reg[PLL_DIV_MSB:PLL_DIV_LSB]
+    io_pll_fdiv = io_pll_reg[PLL_DIV_MSB:PLL_DIV_LSB]
+    arm_clk_sel = arm_clk_reg[ARM_CLK_SEL_MSB:ARM_CLK_SEL_LSB]
+    arm_clk_div = arm_clk_reg[ARM_CLK_DIV_MSB:ARM_CLK_DIV_LSB]
 
     @property
     def cpu_mhz(cls):
@@ -170,14 +280,14 @@ class Clocks_Meta(type):
         The returned clock rate is measured in MHz.
 
         """
-        if arm_clk_sel in [0, 1]:
-            arm_clk_mult = arm_pll_fdiv
-        elif arm_clk_sel == 2:
-            arm_clk_mult = ddr_pll_fdiv
+        if cls.arm_clk_sel in [0, 1]:
+            arm_clk_mult = cls.arm_pll_fdiv
+        elif cls.arm_clk_sel == 2:
+            arm_clk_mult = cls.ddr_pll_fdiv
         else:
-            arm_clk_mult = io_pll_fdiv
-        return round(general_const.SRC_CLK_MHZ *
-                     arm_clk_mult / arm_clk_div, 6)
+            arm_clk_mult = cls.io_pll_fdiv
+        return round(SRC_CLK_MHZ *
+                     arm_clk_mult / cls.arm_clk_div, 6)
 
     @cpu_mhz.setter
     def cpu_mhz(cls, clk_mhz):
@@ -188,7 +298,7 @@ class Clocks_Meta(type):
 
         """
         raise RuntimeError("Not allowed to change CPU clock.")
-
+    
     @property
     def fclk0_mhz(cls):
         """The getter method for PL clock 0.
@@ -202,26 +312,7 @@ class Clocks_Meta(type):
             The returned clock rate measured in MHz.
 
         """
-        clk_idx = 0
-        offset = general_const.CLK_CTRL_REG_OFFSET[clk_idx]
-        fclk_src = _get_reg_value(general_const.SCLR_BASE_ADDRESS + offset,
-                                  general_const.CLK_SRC_BIT_OFFSET,
-                                  general_const.CLK_SRC_BIT_WIDTH)
-        fclk_div0 = _get_reg_value(general_const.SCLR_BASE_ADDRESS + offset,
-                                   general_const.CLK_DIV0_BIT_OFFSET,
-                                   general_const.CLK_DIV0_BIT_WIDTH)
-        fclk_div1 = _get_reg_value(general_const.SCLR_BASE_ADDRESS + offset,
-                                   general_const.CLK_DIV1_BIT_OFFSET,
-                                   general_const.CLK_DIV1_BIT_WIDTH)
-        if fclk_src in [0, 1]:
-            fclk_mult = io_pll_fdiv
-        elif src == 2:
-            fclk_mult = arm_pll_fdiv
-        else:
-            fclk_mult = ddr_pll_fdiv
-
-        return round(general_const.SRC_CLK_MHZ *
-                     fclk_mult / (fclk_div0 * fclk_div1), 6)
+        return cls._get_fclk(0)
 
     @fclk0_mhz.setter
     def fclk0_mhz(cls, clk_mhz):
@@ -248,26 +339,7 @@ class Clocks_Meta(type):
             The returned clock rate measured in MHz.
 
         """
-        clk_idx = 1
-        offset = general_const.CLK_CTRL_REG_OFFSET[clk_idx]
-        fclk_src = _get_reg_value(general_const.SCLR_BASE_ADDRESS + offset,
-                                  general_const.CLK_SRC_BIT_OFFSET,
-                                  general_const.CLK_SRC_BIT_WIDTH)
-        fclk_div0 = _get_reg_value(general_const.SCLR_BASE_ADDRESS + offset,
-                                   general_const.CLK_DIV0_BIT_OFFSET,
-                                   general_const.CLK_DIV0_BIT_WIDTH)
-        fclk_div1 = _get_reg_value(general_const.SCLR_BASE_ADDRESS + offset,
-                                   general_const.CLK_DIV1_BIT_OFFSET,
-                                   general_const.CLK_DIV1_BIT_WIDTH)
-        if fclk_src in [0, 1]:
-            fclk_mult = io_pll_fdiv
-        elif src == 2:
-            fclk_mult = arm_pll_fdiv
-        else:
-            fclk_mult = ddr_pll_fdiv
-
-        return round(general_const.SRC_CLK_MHZ *
-                     fclk_mult / (fclk_div0 * fclk_div1), 6)
+        return cls._get_fclk(1)
 
     @fclk1_mhz.setter
     def fclk1_mhz(cls, clk_mhz):
@@ -294,26 +366,7 @@ class Clocks_Meta(type):
             The returned clock rate measured in MHz.
 
         """
-        clk_idx = 2
-        offset = general_const.CLK_CTRL_REG_OFFSET[clk_idx]
-        fclk_src = _get_reg_value(general_const.SCLR_BASE_ADDRESS + offset,
-                                  general_const.CLK_SRC_BIT_OFFSET,
-                                  general_const.CLK_SRC_BIT_WIDTH)
-        fclk_div0 = _get_reg_value(general_const.SCLR_BASE_ADDRESS + offset,
-                                   general_const.CLK_DIV0_BIT_OFFSET,
-                                   general_const.CLK_DIV0_BIT_WIDTH)
-        fclk_div1 = _get_reg_value(general_const.SCLR_BASE_ADDRESS + offset,
-                                   general_const.CLK_DIV1_BIT_OFFSET,
-                                   general_const.CLK_DIV1_BIT_WIDTH)
-        if fclk_src in [0, 1]:
-            fclk_mult = io_pll_fdiv
-        elif src == 2:
-            fclk_mult = arm_pll_fdiv
-        else:
-            fclk_mult = ddr_pll_fdiv
-
-        return round(general_const.SRC_CLK_MHZ *
-                     fclk_mult / (fclk_div0 * fclk_div1), 6)
+        return cls._get_fclk(2)
 
     @fclk2_mhz.setter
     def fclk2_mhz(cls, clk_mhz):
@@ -340,26 +393,7 @@ class Clocks_Meta(type):
             The returned clock rate measured in MHz.
 
         """
-        clk_idx = 3
-        offset = general_const.CLK_CTRL_REG_OFFSET[clk_idx]
-        fclk_src = _get_reg_value(general_const.SCLR_BASE_ADDRESS + offset,
-                                  general_const.CLK_SRC_BIT_OFFSET,
-                                  general_const.CLK_SRC_BIT_WIDTH)
-        fclk_div0 = _get_reg_value(general_const.SCLR_BASE_ADDRESS + offset,
-                                   general_const.CLK_DIV0_BIT_OFFSET,
-                                   general_const.CLK_DIV0_BIT_WIDTH)
-        fclk_div1 = _get_reg_value(general_const.SCLR_BASE_ADDRESS + offset,
-                                   general_const.CLK_DIV1_BIT_OFFSET,
-                                   general_const.CLK_DIV1_BIT_WIDTH)
-        if fclk_src in [0, 1]:
-            fclk_mult = io_pll_fdiv
-        elif src == 2:
-            fclk_mult = arm_pll_fdiv
-        else:
-            fclk_mult = ddr_pll_fdiv
-
-        return round(general_const.SRC_CLK_MHZ *
-                     fclk_mult / (fclk_div0 * fclk_div1), 6)
+        return cls._get_fclk(3)
 
     @fclk3_mhz.setter
     def fclk3_mhz(cls, clk_mhz):
@@ -373,8 +407,42 @@ class Clocks_Meta(type):
         """
         cls.set_fclk(3, clk_mhz=clk_mhz)
 
-    @staticmethod
-    def set_fclk(clk_idx, div0=None, div1=None, clk_mhz=100.000000):
+    def _get_fclk(cls, clk_idx):
+        """This method will return the clock frequency.
+        
+        This method is not exposed to users.
+
+        Parameters
+        ----------
+        clk_idx : int
+            The index of the PL clock to be changed, from 0 to 3.
+
+        """
+        if clk_idx == 0:
+            clk_reg = cls.fclk0_reg
+        elif clk_idx == 1:
+            clk_reg = cls.fclk1_reg
+        elif clk_idx == 2:
+            clk_reg = cls.fclk2_reg
+        elif clk_idx == 3:
+            clk_reg = cls.fclk3_reg
+        else:
+            raise ValueError("Valid PL clock index is 0 - 3.")
+
+        fclk_src = clk_reg[CLK_SRC_MSB:CLK_SRC_LSB]
+        fclk_div0 = clk_reg[CLK_DIV0_MSB:CLK_DIV0_LSB]
+        fclk_div1 = clk_reg[CLK_DIV1_MSB:CLK_DIV1_LSB]
+        if fclk_src in [0, 1]:
+            fclk_mult = cls.io_pll_fdiv
+        elif src == 2:
+            fclk_mult = cls.arm_pll_fdiv
+        else:
+            fclk_mult = cls.ddr_pll_fdiv
+
+        return round(SRC_CLK_MHZ *
+                     fclk_mult / (fclk_div0 * fclk_div1), 6)
+
+    def set_fclk(cls, clk_idx, div0=None, div1=None, clk_mhz=DEFAULT_CLK_MHZ):
         """This method can set a PL clock frequency.
 
         Users have to specify the index of the PL clock to be changed.
@@ -404,28 +472,34 @@ class Clocks_Meta(type):
             The clock rate in MHz.
 
         """
-        if clk_idx not in range(4):
+        if clk_idx == 0:
+            clk_reg = cls.fclk0_reg
+        elif clk_idx == 1:
+            clk_reg = cls.fclk1_reg
+        elif clk_idx == 2:
+            clk_reg = cls.fclk2_reg
+        elif clk_idx == 3:
+            clk_reg = cls.fclk3_reg
+        else:
             raise ValueError("Valid PL clock index is 0 - 3.")
 
-        offset = general_const.CLK_CTRL_REG_OFFSET[clk_idx]
-        fclk_src = _get_reg_value(general_const.SCLR_BASE_ADDRESS + offset,
-                                  general_const.CLK_SRC_BIT_OFFSET,
-                                  general_const.CLK_SRC_BIT_WIDTH)
+        fclk_src = clk_reg[CLK_SRC_MSB:CLK_SRC_LSB]
         if fclk_src in [0, 1]:
-            fclk_mult = io_pll_fdiv
+            fclk_mult = cls.io_pll_fdiv
         elif fclk_src == 2:
-            fclk_mult = arm_pll_fdiv
+            fclk_mult = cls.arm_pll_fdiv
         else:
-            fclk_mult = ddr_pll_fdiv
+            fclk_mult = cls.ddr_pll_fdiv
 
-        max_clk_mhz = general_const.SRC_CLK_MHZ * fclk_mult
-        max_div0 = 1 << general_const.CLK_DIV0_BIT_WIDTH
-        max_div1 = 1 << general_const.CLK_DIV1_BIT_WIDTH
+        max_clk_mhz = SRC_CLK_MHZ * fclk_mult
+        div0_width = CLK_DIV0_MSB - CLK_DIV0_LSB + 1
+        div1_width = CLK_DIV1_MSB - CLK_DIV1_LSB + 1
+        max_div0 = 1 << div0_width
+        max_div1 = 1 << div1_width
 
         if div0 is None and div1 is None:
             div0, div1 = _get_2_divisors(max_clk_mhz, clk_mhz,
-                                         general_const.CLK_DIV0_BIT_WIDTH,
-                                         general_const.CLK_DIV1_BIT_WIDTH)
+                                         div0_width, div1_width)
         elif div0 is not None and div1 is None:
             div1 = round(max_clk_mhz / clk_mhz / div0)
         elif div1 is not None and div0 is None:
@@ -436,17 +510,11 @@ class Clocks_Meta(type):
         if not 0 < div1 <= max_div1:
             raise ValueError("Frequency divider 1 value out of range.")
 
-        _set_reg_value(general_const.SCLR_BASE_ADDRESS +
-                       general_const.CLK_CTRL_REG_OFFSET[clk_idx],
-                       general_const.CLK_DIV0_BIT_OFFSET,
-                       general_const.CLK_DIV0_BIT_WIDTH, div0)
-        _set_reg_value(general_const.SCLR_BASE_ADDRESS +
-                       general_const.CLK_CTRL_REG_OFFSET[clk_idx],
-                       general_const.CLK_DIV1_BIT_OFFSET,
-                       general_const.CLK_DIV1_BIT_WIDTH, div1)
+        clk_reg[CLK_DIV0_MSB:CLK_DIV0_LSB] = div0
+        clk_reg[CLK_DIV1_MSB:CLK_DIV1_LSB] = div1
 
 
-class Clocks(metaclass=Clocks_Meta):
+class Clocks(metaclass=ClocksMeta):
     """Class for all the PS and PL clocks exposed to users.
 
     With this class, users can get the CPU clock and all the PL clocks. Users
@@ -466,7 +534,6 @@ class Clocks(metaclass=Clocks_Meta):
         The clock rate of the PL clock 3, measured in MHz.
 
     """
-
     def __init__(self):
         """Return a new PL object.
 

@@ -28,8 +28,6 @@
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
-import sys
-import struct
 import weakref
 from . import general_const
 

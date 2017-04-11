@@ -27,20 +27,51 @@
 #   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from . import general_const
-from .gpio import GPIO
-from .mmio import MMIO
-from .pl import PL
-from .pl import Bitstream
-from .pl import Overlay
-from .ps import Register
-from .ps import Clocks
-from .interrupt import Interrupt
-from .xlnk import Xlnk
+
+import pytest
+from pynq import Overlay
+from pynq.tests.util import user_answer_yes
+from pynq.intf import BooleanGenerator
 
 
 __author__ = "Yun Rock Qu"
 __copyright__ = "Copyright 2016, Xilinx"
 __email__ = "pynq_support@xilinx.com"
 
-__all__ = ['tests', 'board', 'iop', 'intf', 'drivers']
+
+ol = Overlay('interface.bit')
+
+
+@pytest.mark.run(order=45)
+def test_bool_func_default():
+    """Test for the BooleanGenerator class.
+    
+    The first test will test the default configuration. The default
+    configuration for any group is AND.
+    
+    """
+    if_id = 3
+    bool_generator = BooleanGenerator(if_id, led=True, verbose=False)
+    print(f'\nPress all the 4 push buttons on board.')
+    assert user_answer_yes("RGB LED (LD4) on when pressing?"), \
+        "Default configuration fails to show the AND output on RGBLED."
+    del bool_generator
+
+
+@pytest.mark.run(order=46)
+def test_bool_func_custom():
+    """Test for the BooleanGenerator class.
+
+    The second test will test a customized configuration. An OR function is
+    used as the example.
+
+    """
+    if_id = 3
+    or_operation = 'PB0 | PB1 | PB2 | PB3'
+    bool_generator = BooleanGenerator(if_id, expr=or_operation,
+                                      led=True, verbose=False)
+    print(f'\nPress any of the 4 push buttons on board.')
+    assert user_answer_yes("RGB LED (LD4) on when pressing?"), \
+        "Configuration fails to show the OR output on RGBLED."
+    del bool_generator
+    ol.reset()

@@ -27,18 +27,14 @@
 #   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import os
+import mmap
+from . import general_const
+import numpy as np
+
 __author__ = "Yun Rock Qu"
 __copyright__ = "Copyright 2016, Xilinx"
 __email__ = "pynq_support@xilinx.com"
-
-
-import os
-import sys
-import struct
-import mmap
-import math
-from . import general_const
-import numpy as np
 
 
 class MMIO:
