@@ -28,18 +28,32 @@
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-import os
 import pytest
+from pynq import general_const
 from pynq import Overlay
+from pynq import Clocks
 
 __author__ = "Yun Rock Qu"
 __copyright__ = "Copyright 2016, Xilinx"
 __email__ = "pynq_support@xilinx.com"
 
 
-ol1 = Overlay('base.bit')
-ol2 = Overlay('base.bit')
-ol3 = Overlay('interface.bit')
+bitfile1 = 'base.bit'
+bitfile2 = 'interface.bit'
+
+ol1 = Overlay(bitfile1)
+ol2 = Overlay(bitfile1)
+ol3 = Overlay(bitfile2)
+
+cpu_mhz = 0
+bitfile1_fclk0_mhz = general_const.DEFAULT_CLK_MHZ
+bitfile1_fclk1_mhz = general_const.DEFAULT_CLK_MHZ
+bitfile1_fclk2_mhz = general_const.DEFAULT_CLK_MHZ
+bitfile1_fclk3_mhz = general_const.DEFAULT_CLK_MHZ
+bitfile2_fclk0_mhz = general_const.DEFAULT_CLK_MHZ
+bitfile2_fclk1_mhz = general_const.DEFAULT_CLK_MHZ
+bitfile2_fclk2_mhz = general_const.DEFAULT_CLK_MHZ
+bitfile2_fclk3_mhz = general_const.DEFAULT_CLK_MHZ
 
 
 @pytest.mark.run(order=2)
@@ -51,9 +65,14 @@ def test_overlay():
     
     """
     global ol1, ol2, ol3
-    
+    global cpu_mhz
+    global bitfile1_fclk0_mhz, bitfile1_fclk1_mhz
+    global bitfile1_fclk2_mhz, bitfile1_fclk3_mhz
+    global bitfile2_fclk0_mhz, bitfile2_fclk1_mhz
+    global bitfile2_fclk2_mhz, bitfile2_fclk3_mhz
+
     ol1.download()
-    assert 'base.bit' in ol1.bitfile_name, \
+    assert bitfile1 in ol1.bitfile_name, \
         'Bitstream is not in the overlay.'
     assert len(ol1.ip_dict) > 0,\
         'Overlay gets empty IP dictionary.'
@@ -82,9 +101,14 @@ def test_overlay():
         # "TEST" should have been cleared by reset()
         assert ol1.gpio_dict[i]['state'] is None,\
             'Overlay cannot reset GPIO dictionary.'
+    cpu_mhz = Clocks.cpu_mhz
+    bitfile1_fclk0_mhz = Clocks.fclk0_mhz
+    bitfile1_fclk1_mhz = Clocks.fclk1_mhz
+    bitfile1_fclk2_mhz = Clocks.fclk2_mhz
+    bitfile1_fclk3_mhz = Clocks.fclk3_mhz
 
     ol2.download()
-    assert 'base.bit' in ol2.bitfile_name, \
+    assert bitfile1 in ol2.bitfile_name, \
         'Bitstream is not in the overlay.'
     assert len(ol2.ip_dict) > 0, \
         'Overlay gets empty IP dictionary.'
@@ -144,6 +168,10 @@ def test_overlay():
         # "TEST" should have been cleared by reset()
         assert ol3.gpio_dict[i]['state'] is None, \
             'Overlay cannot reset GPIO dictionary.'
+    bitfile2_fclk0_mhz = Clocks.fclk0_mhz
+    bitfile2_fclk1_mhz = Clocks.fclk1_mhz
+    bitfile2_fclk2_mhz = Clocks.fclk2_mhz
+    bitfile2_fclk3_mhz = Clocks.fclk3_mhz
 
 
 @pytest.mark.run(order=10)
@@ -154,11 +182,25 @@ def test_overlay1():
     
     """
     global ol1
+    global cpu_mhz
+    global bitfile1_fclk0_mhz, bitfile1_fclk1_mhz
+    global bitfile1_fclk2_mhz, bitfile1_fclk3_mhz
+
     ol1.download()
     assert not ol1.bitstream.timestamp == '', \
-        'Overlay 1 (base.bit) has an empty timestamp.'
+        f'Overlay 1 ({bitfile1}) has an empty timestamp.'
     assert ol1.is_loaded(), \
-        'Overlay 1 (base.bit) should be loaded.'
+        f'Overlay 1 ({bitfile1}) should be loaded.'
+    assert Clocks.cpu_mhz == cpu_mhz, \
+        'CPU frequency should not be changed.'
+    assert Clocks.fclk0_mhz == bitfile1_fclk0_mhz, \
+        f'FCLK0 frequency not correct after downloading {bitfile1}.'
+    assert Clocks.fclk1_mhz == bitfile1_fclk1_mhz, \
+        f'FCLK1 frequency not correct after downloading {bitfile1}.'
+    assert Clocks.fclk2_mhz == bitfile1_fclk2_mhz, \
+        f'FCLK2 frequency not correct after downloading {bitfile1}.'
+    assert Clocks.fclk3_mhz == bitfile1_fclk3_mhz, \
+        f'FCLK3 frequency not correct after downloading {bitfile1}.'
 
 
 @pytest.mark.run(order=30)
@@ -169,11 +211,25 @@ def test_overlay2():
     
     """
     global ol2
+    global cpu_mhz
+    global bitfile1_fclk0_mhz, bitfile1_fclk1_mhz
+    global bitfile1_fclk2_mhz, bitfile1_fclk3_mhz
+
     ol2.download()
     assert not ol2.bitstream.timestamp == '', \
-        'Overlay 2 (base.bit) has an empty timestamp.'
+        f'Overlay 2 ({bitfile1}) has an empty timestamp.'
     assert ol2.is_loaded(), \
-        'Overlay 2 (base.bit) should be loaded.'
+        f'Overlay 2 ({bitfile1}) should be loaded.'
+    assert Clocks.cpu_mhz == cpu_mhz, \
+        'CPU frequency should not be changed.'
+    assert Clocks.fclk0_mhz == bitfile1_fclk0_mhz, \
+        f'FCLK0 frequency not correct after downloading {bitfile1}.'
+    assert Clocks.fclk1_mhz == bitfile1_fclk1_mhz, \
+        f'FCLK1 frequency not correct after downloading {bitfile1}.'
+    assert Clocks.fclk2_mhz == bitfile1_fclk2_mhz, \
+        f'FCLK2 frequency not correct after downloading {bitfile1}.'
+    assert Clocks.fclk3_mhz == bitfile1_fclk3_mhz, \
+        f'FCLK3 frequency not correct after downloading {bitfile1}.'
 
 
 @pytest.mark.run(order=39)
@@ -184,11 +240,25 @@ def test_overlay3():
 
     """
     global ol3
+    global cpu_mhz
+    global bitfile2_fclk0_mhz, bitfile2_fclk1_mhz
+    global bitfile2_fclk2_mhz, bitfile2_fclk3_mhz
+
     ol3.download()
     assert not ol3.bitstream.timestamp == '', \
-        'Overlay 3 (interface.bit) has an empty timestamp.'
+        f'Overlay 3 ({bitfile2}) has an empty timestamp.'
     assert ol3.is_loaded(), \
-        'Overlay 3 (interface.bit) should be loaded.'
+        f'Overlay 3 ({bitfile2}) should be loaded.'
+    assert Clocks.cpu_mhz == cpu_mhz, \
+        'CPU frequency should not be changed.'
+    assert Clocks.fclk0_mhz == bitfile2_fclk0_mhz, \
+        f'FCLK0 frequency not correct after downloading {bitfile2}.'
+    assert Clocks.fclk1_mhz == bitfile2_fclk1_mhz, \
+        f'FCLK1 frequency not correct after downloading {bitfile2}.'
+    assert Clocks.fclk2_mhz == bitfile2_fclk2_mhz, \
+        f'FCLK2 frequency not correct after downloading {bitfile2}.'
+    assert Clocks.fclk3_mhz == bitfile2_fclk3_mhz, \
+        f'FCLK3 frequency not correct after downloading {bitfile2}.'
 
 
 @pytest.mark.run(order=49)
@@ -199,11 +269,26 @@ def test_end():
     
     """
     global ol1, ol2, ol3
+    global cpu_mhz
+    global bitfile1_fclk0_mhz, bitfile1_fclk1_mhz
+    global bitfile1_fclk2_mhz, bitfile1_fclk3_mhz
+
     ol1.download()
     assert not ol1.bitstream.timestamp == '', \
-        'Overlay 1 (base.bit) has an empty timestamp.'
+        f'Overlay 1 ({bitfile1}) has an empty timestamp.'
     assert ol1.is_loaded(), \
-        'Overlay 1 (base.bit) should be loaded.'
+        f'Overlay 1 ({bitfile1}) should be loaded.'
+    assert Clocks.cpu_mhz == cpu_mhz, \
+        'CPU frequency should not be changed.'
+    assert Clocks.fclk0_mhz == bitfile1_fclk0_mhz, \
+        f'FCLK0 frequency not correct after downloading {bitfile1}.'
+    assert Clocks.fclk1_mhz == bitfile1_fclk1_mhz, \
+        f'FCLK1 frequency not correct after downloading {bitfile1}.'
+    assert Clocks.fclk2_mhz == bitfile1_fclk2_mhz, \
+        f'FCLK2 frequency not correct after downloading {bitfile1}.'
+    assert Clocks.fclk3_mhz == bitfile1_fclk3_mhz, \
+        f'FCLK3 frequency not correct after downloading {bitfile1}.'
+
     del ol1
     del ol2
     del ol3
