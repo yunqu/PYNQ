@@ -61,6 +61,42 @@ def _verify_wave_tokens(wave_lane):
             raise ValueError('Valid tokens are: {}'.format(valid_tokens))
 
 
+def draw_wavedrom(data):
+        """Display the waveform using the Wavedrom package.
+
+        This method requires 2 javascript files to be copied locally. Users
+        can call this method directly to draw any wavedrom data.
+        
+        Example usage:
+
+        >>> a = {
+            'signal': [
+                {'name': 'clk', 'wave': 'p.....|...'},
+                {'name': 'dat', 'wave': 'x.345x|=.x', 
+                                'data': ['head', 'body', 'tail', 'data']},
+                {'name': 'req', 'wave': '0.1..0|1.0'},
+                {},
+                {'name': 'ack', 'wave': '1.....|01.'}
+            ]}
+        >>> draw_wavedrom(a)
+
+        """
+        if not (os.path.isfile('./js/WaveDrom.js') and
+                os.path.isfile('./js/WaveDromSkin.js')):
+            if os.system("cp -rf " +
+                         os.path.dirname(os.path.realpath(__file__)) +
+                         '/js ./'):
+                raise RuntimeError('Cannot copy WaveDrom javascripts.')
+
+        htmldata = '<script type="WaveDrom">' + json.dumps(data) + '</script>'
+        IPython.core.display.display_html(IPython.core.display.HTML(htmldata))
+        jsdata = 'WaveDrom.ProcessAll();'
+        IPython.core.display.display_javascript(
+            IPython.core.display.Javascript(
+                data=jsdata,
+                lib=['files/js/WaveDrom.js', 'files/js/WaveDromSkin.js']))
+
+
 class Waveform:
     """A wrapper class for Wavedrom package and interfacing functions.
 
@@ -145,21 +181,7 @@ class Waveform:
         This package requires 2 javascript files to be copied locally.
 
         """
-        if not (os.path.isfile('./js/WaveDrom.js') and
-                os.path.isfile('./js/WaveDromSkin.js')):
-            if os.system("cp -rf " +
-                         os.path.dirname(os.path.realpath(__file__)) +
-                         '/js ./'):
-                raise RuntimeError('Cannot copy WaveDrom javascripts.')
-
-        data = self.waveform_dict
-        htmldata = '<script type="WaveDrom">' + json.dumps(data) + '</script>'
-        IPython.core.display.display_html(IPython.core.display.HTML(htmldata))
-        jsdata = 'WaveDrom.ProcessAll();'
-        IPython.core.display.display_javascript(
-            IPython.core.display.Javascript(
-                data=jsdata,
-                lib=['files/js/WaveDrom.js', 'files/js/WaveDromSkin.js']))
+        draw_wavedrom(self.waveform_dict)
 
     def _get_wavelane_group(self, group_name):
         """Return the WaveLane group if present in waveform_dict.
@@ -460,9 +482,10 @@ class Waveform:
                 for wavelane in wavelane_group:
                     pin, wave = wavelane['pin'], wavelane['wave']
                     if pin in pin_to_name:
-                        update.append({'name': pin_to_name[pin],
-                                       'pin': pin,
-                                       'wave': wave})
+                        temp_dict = {'name': pin_to_name[pin],
+                                     'pin': pin,
+                                     'wave': wave}
+                        update.append(temp_dict)
                 break
 
         if not pin_to_name:

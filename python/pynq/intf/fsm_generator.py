@@ -288,7 +288,6 @@ class FSMGenerator:
 
     fsm_spec = {'inputs': [('reset','D0'), ('direction','D1')],
     'outputs': [('alpha','D3'), ('beta','D4'), ('gamma','D5')],
-    'monitors': [('enable', 'D6')]
     'states': ('S0', 'S1', 'S2', 'S3', 'S4', 'S5'),
     'transitions': [['00', 'S0', 'S1', '000'],
                     ['01', 'S0', 'S5', '000'],
@@ -332,8 +331,6 @@ class FSMGenerator:
         List of input pins on Arduino header.
     output_pins : list
         List of output pins on Arduino header.
-    monitor_pins : list
-        List of monitored pins on Arduino header.
     running : bool
         Flag indicating whether the FSM is currently running.
     use_state_bits : bool
@@ -398,7 +395,6 @@ class FSMGenerator:
         self.transitions = list()
         self.input_pins = list()
         self.output_pins = list()
-        self.monitor_pins = list()
         self.running = False
         self.use_state_bits = use_state_bits
         self.data_samples = None
@@ -459,15 +455,6 @@ class FSMGenerator:
         self.input_pins = [i[1] for i in fsm_spec['inputs']]
         self.output_pins = [i[1] for i in fsm_spec['outputs']]
 
-        # The key 'monitors' is optional
-        if 'monitors' in fsm_spec:
-            check_duplicate(fsm_spec, 'monitors')
-            self.monitor_pins = [i[1] for i in fsm_spec['monitors']]
-            check_pins(fsm_spec, 'monitors')
-        else:
-            fsm_spec['monitors'] = []
-            self.monitor_pins = []
-
         check_num_bits(self.num_input_bits, 'inputs', FSM_MAX_INPUT_BITS)
         check_num_bits(self.num_output_bits, 'outputs', FSM_MAX_OUTPUT_BITS)
         check_num_bits(self.num_state_bits, 'states', FSM_MAX_STATE_BITS)
@@ -485,8 +472,7 @@ class FSMGenerator:
         if self.use_state_bits:
             # Update outputs
             state_pins = list()
-            total_pins_used = self.input_pins[:] + self.output_pins[:] + \
-                self.monitor_pins[:]
+            total_pins_used = self.input_pins[:] + self.output_pins[:]
             num_pins_altered = 0
             for bit in range(self.num_state_bits):
                 output_bit_name = 'state_bit' + str(bit)
@@ -534,15 +520,12 @@ class FSMGenerator:
         self.input_pins = [i[1] for i in fsm_spec['inputs']]
         self.output_pins = [i[1] for i in fsm_spec['outputs']]
         check_pin_conflict(self.input_pins, self.output_pins)
-        check_pin_conflict(self.input_pins, self.monitor_pins)
-        check_pin_conflict(self.monitor_pins, self.output_pins)
 
         waveform_dict = {'signal': [
             ['analysis']],
             'foot': {'tock': 1},
             'head': {'tick': 1, 'text': 'Finite State Machine'}}
-        for name, pin in (fsm_spec['inputs'] + fsm_spec['outputs'] +
-                          fsm_spec['monitors']):
+        for name, pin in (fsm_spec['inputs'] + fsm_spec['outputs']):
             waveform_dict['signal'][0].append({'name': name, 'pin': pin})
         self.waveform = Waveform(waveform_dict, analysis_name='analysis')
 
