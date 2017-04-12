@@ -139,7 +139,7 @@ def test_overlay():
             'Overlay cannot reset GPIO dictionary.'
 
     ol3.download()
-    assert 'interface.bit' in ol3.bitfile_name, \
+    assert bitfile2 in ol3.bitfile_name, \
         'Bitstream is not in the overlay.'
     assert len(ol3.ip_dict) > 0, \
         'Overlay gets empty IP dictionary.'
