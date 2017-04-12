@@ -1,7 +1,7 @@
 # Makefile to build select Microblaze projects.
 
 
-MBBINS = pmod_adc.bin \
+BIN_IOP = pmod_adc.bin \
 		pmod_dac.bin \
 		pmod_oled.bin \
 		pmod_als.bin \
@@ -36,21 +36,27 @@ MBBINS = pmod_adc.bin \
 		arduino_grove_th02.bin \
 		arduino_lcd18.bin
 
-all: iop_bins
-	@echo "Completed Microblaze Projects' Builds"
+BIN_INTF = arduino_intf.bin
+
+all: bin_iop bin_intf
+	@echo
+	@tput setaf 2 ; echo "Completed Microblaze Projects' Builds"; tput sgr0;
+	@echo
 
 mb_bsp: sdk_workspace
-	cd bsp_pmod && make && cd ..
-	cd bsp_arduino && make && cd ..
 
 %.bin: mb_bsp
-	cd $(subst .bin,,$@)/Debug && make clean && make 
+	@cd $(subst .bin,,$@)/Debug && make clean && make 
 
-iop_bins: $(MBBINS)
-	@cp */Debug/*.bin ./bin/
+bin_iop: $(BIN_IOP)
+	@for f in $(BIN_IOP); do \
+		cp -rf `basename $$f .bin`/Debug/$$f ./bin_iop/; done
 
+bin_intf: $(BIN_INTF)
+	@for f in $(BIN_INTF); do \
+		cp -rf `basename $$f .bin`/Debug/$$f ./bin_intf/; done
 
-sdk_workspace: base.hdf 
+sdk_workspace:
 	xsdk -batch -source build_xsdk.tcl
 
 clean:
@@ -59,6 +65,7 @@ clean:
 	rm -f */Debug/*.elf.size
 	rm -f */Debug/src/*.o
 	rm -f */Debug/src/*.d
-	rm -f bin/*
-	rm -rf bsp_pmod bsp_arduino hw_def .Xil .metadata SDK.log	
+	rm -f bin_iop/*
+	rm -f bin_intf/*
+	rm -rf bsp_* hw_def_* .Xil .metadata SDK.log
 	rm -rf sdk_import

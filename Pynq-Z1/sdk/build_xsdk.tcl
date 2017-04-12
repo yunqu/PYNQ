@@ -2,15 +2,26 @@
 #   Additionally, will build a hw project and bsp
 
 sdk setws .
-if {![file exists "hw_def"]} {
-    sdk createhw -name hw_def -hwspec ./base.hdf
+
+# Creating the hardware definition folders
+if {![file exists "hw_def_iop"]} {
+    sdk createhw -name hw_def_iop -hwspec ./base.hdf
 }
-if {![file exists "bsp_pmod"]} {
-    sdk createbsp -name bsp_pmod -hwproject hw_def -proc iop1_mb -os standalone
+if {![file exists "hw_def_intf"]} {
+    sdk createhw -name hw_def_intf -hwspec ./interface.hdf
 }
-if {![file exists "bsp_arduino"]} {
-    sdk createbsp -name bsp_arduino -hwproject hw_def -proc iop3_mb -os standalone
+
+# Building all the BSPs
+if {![file exists "bsp_pmod_iop"]} {
+    sdk createbsp -name bsp_pmod_iop -hwproject hw_def_iop -proc iop1_mb -os standalone
 }
+if {![file exists "bsp_arduino_iop"]} {
+    sdk createbsp -name bsp_arduino_iop -hwproject hw_def_iop -proc iop3_mb -os standalone
+}
+if {![file exists "bsp_arduino_intf"]} {
+    sdk createbsp -name bsp_arduino_intf -hwproject hw_def_intf -proc iop3_mb -os standalone
+}
+
 
 sdk build all
 
