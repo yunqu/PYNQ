@@ -116,7 +116,7 @@ class Pmod_DevMode(object):
         """Start the Microblaze processor.
         
         The processor will start automatically after instantiation.
-        
+
         This method will:
         1. zero out mailbox CMD register;
         2. load switch config;

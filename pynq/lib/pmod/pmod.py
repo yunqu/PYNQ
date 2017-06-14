@@ -31,6 +31,7 @@ import asyncio
 import os
 import sys
 import math
+from pynq.lib import PynqMicroblaze
 from . import MAILBOX_OFFSET
 from . import MAILBOX_PY2IOP_CMD_OFFSET
 from . import BIN_LOCATION
@@ -57,7 +58,7 @@ class Pmod(PynqMicroblaze):
         The absolute path of the Microblaze program.
     state : str
         The status (IDLE, RUNNING, or STOPPED) of the Microblaze.
-    reset : GPIO
+    reset_pin : GPIO
         The reset pin associated with the Microblaze.
     mmio : MMIO
         The MMIO instance associated with the Microblaze.
@@ -148,8 +149,8 @@ class Pmod(PynqMicroblaze):
         None
 
         """
-        self.write(MAILBOX_OFFSET + MAILBOX_PY2DIF_CMD_OFFSET, command)
-        while self.read(MAILBOX_OFFSET + MAILBOX_PY2DIF_CMD_OFFSET) != 0:
+        self.write(MAILBOX_OFFSET + MAILBOX_PY2IOP_CMD_OFFSET, command)
+        while self.read(MAILBOX_OFFSET + MAILBOX_PY2IOP_CMD_OFFSET) != 0:
             pass
 
     def write_non_blocking_command(self, command):
@@ -168,4 +169,4 @@ class Pmod(PynqMicroblaze):
         None
 
         """
-        self.write(MAILBOX_OFFSET + MAILBOX_PY2DIF_CMD_OFFSET, command)
+        self.write(MAILBOX_OFFSET + MAILBOX_PY2IOP_CMD_OFFSET, command)

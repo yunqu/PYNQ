@@ -96,7 +96,7 @@ class PynqMicroblaze:
         The absolute path of the Microblaze program.
     state : str
         The status (IDLE, RUNNING, or STOPPED) of the Microblaze.
-    reset : GPIO
+    reset_pin : GPIO
         The reset pin associated with the Microblaze.
     mmio : MMIO
         The MMIO instance associated with the Microblaze.
@@ -136,10 +136,6 @@ class PynqMicroblaze:
             IP name and the reset name.
         mb_program : str
             The Microblaze program loaded for the processor.
-        intr_pin : str
-            Name of the interrupt pin for the Microblaze.
-        intr_ack_gpio : int
-            Number of the GPIO pin used to clear the interrupt.
 
         Raises
         ------
@@ -203,12 +199,12 @@ class PynqMicroblaze:
         self.rst_name = rst_name
         self.mb_program = mb_program
         self.state = 'IDLE'
-        self.reset = GPIO(GPIO.get_gpio_pin(gpio_uix), "out")
+        self.reset_pin = GPIO(GPIO.get_gpio_pin(gpio_uix), "out")
         self.mmio = MMIO(addr_base, addr_range)
 
         # Set optional attributes
         if (intr_pin_name is not None) and (intr_ack_gpio is not None):
-            self.interrupt = MBInterruptEvent(intr_pin, intr_ack_gpio)
+            self.interrupt = MBInterruptEvent(intr_pin_name, intr_ack_gpio)
         else:
             self.interrupt = None
 
@@ -226,7 +222,7 @@ class PynqMicroblaze:
 
         """
         self.state = 'RUNNING'
-        self.reset.write(0)
+        self.reset_pin.write(0)
 
     def reset(self):
         """Reset the Microblaze to stop it from running.
@@ -239,7 +235,7 @@ class PynqMicroblaze:
 
         """
         self.state = 'STOPPED'
-        self.reset.write(1)
+        self.reset_pin.write(1)
 
     def program(self):
         """This method programs the Microblaze.

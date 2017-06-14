@@ -246,8 +246,8 @@ class Arduino_LCD18(object):
             if self.microblaze.interrupt:
                 self.microblaze.interrupt.clear()
             self.microblaze.write_non_blocking_command(DISPLAY)
-            while self.microblaze.read([MAILBOX_OFFSET +
-                                        MAILBOX_PY2IOP_CMD_OFFSET]) != [0]:
+            while self.microblaze.read(MAILBOX_OFFSET +
+                                       MAILBOX_PY2IOP_CMD_OFFSET) != 0:
                 if self.microblaze.interrupt:
                     yield from self.microblaze.interrupt.wait()
         finally:

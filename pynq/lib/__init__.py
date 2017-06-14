@@ -41,9 +41,6 @@ from .led import LED
 from .rgbled import RGBLED
 from .switch import Switch
 from .button import Button
-from .pmod import *
-from .arduino import *
-from .intf import *
 
 
 __author__ = "Graham Schelle"

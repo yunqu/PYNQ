@@ -31,7 +31,6 @@
 from . import Pmod_DevMode
 from . import PMOD_SWCFG_IIC0_SDA
 from . import PMOD_SWCFG_IIC0_SCL
-from . import PMOD_SWCFG_IIC0_DIO
 from . import PMOD_XIIC_0_BASEADDR
 from . import PMOD_XIIC_SR_REG_OFFSET
 from . import PMOD_XIIC_DTR_REG_OFFSET
