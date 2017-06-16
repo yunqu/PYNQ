@@ -28,58 +28,68 @@
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-from random import randint
-from random import choice
-from math import pow
-from time import sleep
 import pytest
-from pynq import MMIO
-from pynq import PL
+from pynq import Overlay
+from pynq.lib.pmod import Pmod
+from pynq.lib.pmod import PMODA
+from pynq.lib.pmod import PMODB
 
 
-__author__ = "Yun Rock Qu"
+__author__ = "Giuseppe Natale, Yun Rock Qu"
 __copyright__ = "Copyright 2016, Xilinx"
 __email__ = "pynq_support@xilinx.com"
 
 
-@pytest.mark.run(order=4)
-def test_mmio():
-    """Test whether MMIO class is working properly.
-    
-    Generate random tests to swipe through the entire range:
-    
-    >>> mmio.write(all offsets, random data)
-    
-    Steps:
-    
-    1. Initialize an instance with length in bytes
-    
-    2. Write an integer to a given offset.
-    
-    3. Write a number within the range [0, 2^32-1] into a 4-byte location.
-    
-    4. Change to the next offset and repeat.
+try:
+    _ = Overlay('base.bit')
+    flag = True
+except IOError:
+    flag = False
+
+
+@pytest.mark.skipif(not flag, reason="need base overlay to run")
+def test_pmod_microblaze():
+    """Test for the Pmod class.
+
+    There are 3 tests done here:
+
+    1. Test whether `Pmod()` can return an object without errors. 
+
+    2. Calling `Pmod()` should not raise any exception if the previous Pmod
+    object runs the same program.
+
+    3. Creates multiple Pmod instances on the same fixed ID. Exception should
+    be raised in this case.
     
     """
-    mmio_base = mmio_range = None
-    for ip in PL.ip_dict:
-        if PL.ip_dict[ip]['type'] == "xilinx.com:ip:axi_bram_ctrl:4.0":
-            mmio_base = PL.ip_dict[ip]['phys_addr']
-            mmio_range = PL.ip_dict[ip]['addr_range']
-            break
+    ol = Overlay('base.bit')
+    ol.download()
 
-    if mmio_base is not None and mmio_range is not None:
-        mmio = MMIO(mmio_base, mmio_range)
-        for offset in range(0, min(100, mmio_range), 4):
-            data1 = randint(0, pow(2, 32) - 1)
-            mmio.write(offset, data1)
-            sleep(0.1)
-            data2 = mmio.read(offset)
-            assert data1 == data2, \
-                f'MMIO read back a wrong random value at offset {offset}.'
-            mmio.write(offset, 0)
-            sleep(0.1)
-            assert mmio.read(offset) == 0, \
-                f'MMIO read back a wrong fixed value at offset {offset}.'
-    else:
-        raise RuntimeError("No testable IP for MMIO class.")
+    for mb_info in [PMODA, PMODB]:
+        exception_raised = False
+        try:
+            _ = Pmod(mb_info, 'pmod_mailbox.bin')
+        except RuntimeError:
+            exception_raised = True
+        assert not exception_raised, 'Should not raise exception.'
+        ol.reset()
+
+        exception_raised = False
+        _ = Pmod(mb_info, 'pmod_mailbox.bin')
+        try:
+            _ = Pmod(mb_info, 'pmod_mailbox.bin')
+        except RuntimeError:
+            exception_raised = True
+        assert not exception_raised, 'Should not raise exception.'
+        ol.reset()
+
+        exception_raised = False
+        _ = Pmod(mb_info, 'pmod_dac.bin')
+        try:
+            _ = Pmod(mb_info, 'pmod_adc.bin')
+        except RuntimeError:
+            exception_raised = True
+        assert exception_raised, 'Should raise exception.'
+        ol.reset()
+
+    del ol

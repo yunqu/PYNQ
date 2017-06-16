@@ -28,58 +28,52 @@
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-from random import randint
-from random import choice
-from math import pow
-from time import sleep
 import pytest
-from pynq import MMIO
-from pynq import PL
+from time import sleep
+from pynq import Overlay
+from pynq.lib.pmod import Pmod_ALS
+from pynq.lib.pmod import PMODA
+from pynq.lib.pmod import PMODB
+from pynq.tests.util import user_answer_yes
+from pynq.tests.util import get_interface_id
 
 
-__author__ = "Yun Rock Qu"
+__author__ = "Naveen Purushotham, Yun Rock Qu"
 __copyright__ = "Copyright 2016, Xilinx"
 __email__ = "pynq_support@xilinx.com"
 
 
-@pytest.mark.run(order=4)
-def test_mmio():
-    """Test whether MMIO class is working properly.
+try:
+    _ = Overlay('base.bit')
+    flag0 = True
+except IOError:
+    flag0 = False
+flag1 = user_answer_yes("\nPmod ALS attached to the board?")
+if flag1:
+    als_id = eval(get_interface_id('Pmod ALS', options=['PMODA', 'PMODB']))
+flag = flag0 and flag1
+
+
+@pytest.mark.skipif(not flag,
+                    reason="need Pmod ALS attached to the base overlay")
+def test_readlight():
+    """Test for the ALS class.
     
-    Generate random tests to swipe through the entire range:
-    
-    >>> mmio.write(all offsets, random data)
-    
-    Steps:
-    
-    1. Initialize an instance with length in bytes
-    
-    2. Write an integer to a given offset.
-    
-    3. Write a number within the range [0, 2^32-1] into a 4-byte location.
-    
-    4. Change to the next offset and repeat.
+    This test reads the ALS and asks the user to dim light manually. Then
+    verify that a lower reading is displayed.
     
     """
-    mmio_base = mmio_range = None
-    for ip in PL.ip_dict:
-        if PL.ip_dict[ip]['type'] == "xilinx.com:ip:axi_bram_ctrl:4.0":
-            mmio_base = PL.ip_dict[ip]['phys_addr']
-            mmio_range = PL.ip_dict[ip]['addr_range']
-            break
-
-    if mmio_base is not None and mmio_range is not None:
-        mmio = MMIO(mmio_base, mmio_range)
-        for offset in range(0, min(100, mmio_range), 4):
-            data1 = randint(0, pow(2, 32) - 1)
-            mmio.write(offset, data1)
-            sleep(0.1)
-            data2 = mmio.read(offset)
-            assert data1 == data2, \
-                f'MMIO read back a wrong random value at offset {offset}.'
-            mmio.write(offset, 0)
-            sleep(0.1)
-            assert mmio.read(offset) == 0, \
-                f'MMIO read back a wrong fixed value at offset {offset}.'
-    else:
-        raise RuntimeError("No testable IP for MMIO class.")
+    Overlay('base.bit').download()
+    als = Pmod_ALS(als_id)
+    
+    # Wait for the Pmod ALS to finish initialization
+    sleep(0.01)
+    n = als.read()
+    print("\nCurrent ALS reading: {}.".format(n))
+    assert user_answer_yes("Is a reading between 0-255 displayed?")
+    input("Dim light by placing palm over the ALS and hit enter...")
+    n = als.read()
+    print("Current ALS reading: {}.".format(n))
+    assert user_answer_yes("Is a lower reading displayed?")
+    
+    del als

@@ -28,58 +28,44 @@
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-from random import randint
-from random import choice
-from math import pow
-from time import sleep
 import pytest
-from pynq import MMIO
-from pynq import PL
+from pynq import Overlay
+from pynq.lib.pmod import Pmod_TMP2
+from pynq.lib.pmod import PMODA
+from pynq.lib.pmod import PMODB
+from pynq.tests.util import user_answer_yes
+from pynq.tests.util import get_interface_id
 
 
-__author__ = "Yun Rock Qu"
+__author__ = "Naveen Purushotham, Yun Rock Qu"
 __copyright__ = "Copyright 2016, Xilinx"
 __email__ = "pynq_support@xilinx.com"
 
 
-@pytest.mark.run(order=4)
-def test_mmio():
-    """Test whether MMIO class is working properly.
+try:
+    _ = Overlay('base.bit')
+    flag0 = True
+except IOError:
+    flag0 = False
+flag1 = user_answer_yes("\nPmod TMP2 attached to the board?")
+if flag1:
+    tmp2_id = eval(get_interface_id('Pmod TMP2', options=['PMODA', 'PMODB']))
+flag = flag0 and flag1
+
+
+@pytest.mark.skipif(not flag, 
+                    reason="need Pmod TMP2 attached to the base overlay")
+def test_read_temp():
+    """Test for the TMP2 class.
     
-    Generate random tests to swipe through the entire range:
-    
-    >>> mmio.write(all offsets, random data)
-    
-    Steps:
-    
-    1. Initialize an instance with length in bytes
-    
-    2. Write an integer to a given offset.
-    
-    3. Write a number within the range [0, 2^32-1] into a 4-byte location.
-    
-    4. Change to the next offset and repeat.
+    Reads the TMP2 and asks the user if the temperature is displayed.
     
     """
-    mmio_base = mmio_range = None
-    for ip in PL.ip_dict:
-        if PL.ip_dict[ip]['type'] == "xilinx.com:ip:axi_bram_ctrl:4.0":
-            mmio_base = PL.ip_dict[ip]['phys_addr']
-            mmio_range = PL.ip_dict[ip]['addr_range']
-            break
+    Overlay('base.bit').download()
+    tmp2 = Pmod_TMP2(tmp2_id)
 
-    if mmio_base is not None and mmio_range is not None:
-        mmio = MMIO(mmio_base, mmio_range)
-        for offset in range(0, min(100, mmio_range), 4):
-            data1 = randint(0, pow(2, 32) - 1)
-            mmio.write(offset, data1)
-            sleep(0.1)
-            data2 = mmio.read(offset)
-            assert data1 == data2, \
-                f'MMIO read back a wrong random value at offset {offset}.'
-            mmio.write(offset, 0)
-            sleep(0.1)
-            assert mmio.read(offset) == 0, \
-                f'MMIO read back a wrong fixed value at offset {offset}.'
-    else:
-        raise RuntimeError("No testable IP for MMIO class.")
+    n = tmp2.read()
+    print("\nCurrent temperature: {} C.".format(n))
+    assert user_answer_yes("Reading in celsius displayed?")
+
+    del tmp2

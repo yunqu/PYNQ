@@ -88,8 +88,7 @@ class Pmod_IO(Pmod_DevMode):
         super().__init__(mb_info, PMOD_SWCFG_DIOALL)
         self.index = index
         self.direction = direction
-
-        self.microblaze.start()
+        self.start()
         if self.direction == 'in':
             self.write_cmd(PMOD_DIO_BASEADDR +
                            PMOD_DIO_TRI_OFFSET,
@@ -98,7 +97,7 @@ class Pmod_IO(Pmod_DevMode):
             self.write_cmd(PMOD_DIO_BASEADDR +
                            PMOD_DIO_TRI_OFFSET,
                            PMOD_CFG_DIO_ALLOUTPUT)
-        self.microblaze.load_switch_config()
+        self.load_switch_config()
 
     def write(self, value): 
         """Send the value to the offboard Pmod IO device.

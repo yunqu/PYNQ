@@ -77,8 +77,7 @@ class Pmod_LED8(Pmod_DevMode):
 
         super().__init__(mb_info, PMOD_SWCFG_DIOALL)
         self.index = index
-
-        self.microblaze.start()
+        self.start()
         self.write_cmd(PMOD_DIO_BASEADDR +
                        PMOD_DIO_TRI_OFFSET,
                        PMOD_CFG_DIO_ALLOUTPUT)
