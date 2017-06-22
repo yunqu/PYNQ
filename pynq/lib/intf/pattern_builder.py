@@ -27,18 +27,24 @@
 #   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__author__ = "Yun Rock Qu"
-__copyright__ = "Copyright 2017, Xilinx"
-__email__ = "pynq_support@xilinx.com"
 
 import re
 import numpy as np
-from .intf_const import INTF_MICROBLAZE_BIN, IOSWITCH_PG_SELECT, \
-    PYNQZ1_DIO_SPECIFICATION, CMD_CONFIG_PG, CMD_ARM_PG, \
-    CMD_RUN, CMD_STOP
-from .intf import request_intf, _INTF
+from . import INTF_MICROBLAZE_BIN
+from . import MAX_NUM_PATTERN_SAMPLES
+from . import MAX_NUM_TRACE_SAMPLES
+from . import IOSWITCH_PG_SELECT
+from . import PYNQZ1_DIO_SPECIFICATION
+from . import CMD_CONFIG_PG
+from . import CMD_ARM_PG
+from .intf import Intf
 from .waveform import Waveform
 from .trace_analyzer import TraceAnalyzer
+
+
+__author__ = "Yun Rock Qu"
+__copyright__ = "Copyright 2017, Xilinx"
+__email__ = "pynq_support@xilinx.com"
 
 
 def wave_to_bitstring(wave):
@@ -52,8 +58,8 @@ def wave_to_bitstring(wave):
 
     Returns
     -------
-    list
-        A list of elements, each element being 0 or 1.
+    str
+        A bit sequence of 0's and 1's.
 
     """
     substitution_map = {'l': '0', 'h': '1'}
@@ -73,7 +79,7 @@ def bitstring_to_int(bitstring):
 
     Parameters
     ----------
-    bistring : str
+    bitstring : str
         The input string to convert.
 
     Returns
@@ -106,7 +112,7 @@ def int_to_sample(bits):
 
 
 class PatternBuilder:
-    """Class for the Pattern Builder.
+    """Class for the Pattern builder.
 
     This class can generate digital IO patterns / stimulus on output pins.
     Users can specify whether to use a pin as input or output.
@@ -114,54 +120,71 @@ class PatternBuilder:
     Attributes
     ----------
     intf : _INTF
-        INTF instance used by Arduino_PG class.
+        The interface Microblaze object used by this class.
+    frequency_mhz: float
+        The frequency of the running FSM / captured samples, in MHz.
     waveform : Waveform
         The Waveform object used for Wavedrom display.
     src_samples: numpy.ndarray
         The numpy array storing the stimuli, each sample being 32 bits.
     dst_samples: numpy.ndarray
         The numpy array storing the response, each sample being 64 bits.
+    num_analyzer_samples : int
+        The number of analyzer samples to capture.
 
     """
-
-    def __init__(self, intf_microblaze, waveform_dict,
-                 stimulus_name='stimulus',
-                 analysis_name='analysis',
+    def __init__(self, intf_microblaze, waveform_dict, frequency_mhz=10,
+                 stimulus_name=None, analysis_name=None,
                  intf_spec=PYNQZ1_DIO_SPECIFICATION,
-                 use_analyzer=True, num_analyzer_samples=4096):
-        """Return a new Arduino_PG object.
+                 use_analyzer=True,
+                 num_analyzer_samples=MAX_NUM_TRACE_SAMPLES):
+        """Return a new pattern builder object.
 
         Parameters
         ----------
-        intf_microblaze : _INTF/int
-            The interface object or interface ID.
+        intf_microblaze : Intf/dict
+            The interface Microblaze object, or a dictionary storing 
+            Microblaze information, such as the IP name and the reset name.
         waveform_dict : dict
             Waveform dictionary in WaveJSON format.
+        frequency_mhz: float
+            The frequency of the FSM and captured samples, in MHz.
         stimulus_name : str
-            Name of the WaveLane group for the stimulus, defaulted to
-            `stimulus`.
+            Name of the WaveLane group for the stimulus if used.
         analysis_name : str
-            Name of the WaveLane group for the analysis, defaulted to
-            `analysis`.
+            Name of the WaveLane group for the analysis if used.
         use_analyzer : bool
             Indicate whether to use the analyzer to capture the trace as well.
+        num_analyzer_samples : int
+            The number of analyzer samples to capture.
 
         """
-        if isinstance(intf_microblaze, _INTF):
+        if isinstance(intf_microblaze, Intf):
             self.intf = intf_microblaze
-        elif isinstance(intf_microblaze, int):
-            self.intf = request_intf(intf_microblaze, INTF_MICROBLAZE_BIN)
+        elif isinstance(intf_microblaze, dict):
+            self.intf = Intf(intf_microblaze)
         else:
             raise TypeError(
-                "intf_microblaze has to be a intf._INTF or int type.")
+                "Parameter intf_microblaze has to be intf.Intf or dict.")
 
         self.intf_spec = intf_spec
+        self.frequency_mhz = 0
+        self.stimulus_group = None
         self.stimulus_name = stimulus_name
+        self.stimulus_names = None
+        self.stimulus_pins = None
+        self.stimulus_waves = None
+        self.analysis_group = None
         self.analysis_name = analysis_name
+        self.analysis_names = None
+        self.analysis_pins = None
         self.src_samples = None
         self.dst_samples = None
-
-        self.waveform_dict = waveform_dict
+        self.waveform_dict = None
+        self.waveform = None
+        self.num_analyzer_samples = num_analyzer_samples
+        self._longest_wave = None
+        self._max_wave_length = 0
 
         if use_analyzer:
             self.analyzer = TraceAnalyzer(
@@ -170,7 +193,7 @@ class PatternBuilder:
         else:
             self.analyzer = None
 
-        self.config()
+        self.config(waveform_dict, frequency_mhz)
 
     @property
     def max_wave_length(self):
@@ -199,13 +222,13 @@ class PatternBuilder:
         """
         # gather which pins are being used
         pg_pins = self.waveform.analysis_pins + self.waveform.stimulus_pins
-        ioswitch_pins = [self.intf_spec['output_pin_map'][pin]
+        ioswitch_pins = [self.intf_spec['traceable_outputs'][pin]
                          for pin in pg_pins]
 
         # send list to _INTF processor for handling
         self.intf.config_ioswitch(ioswitch_pins, IOSWITCH_PG_SELECT)
 
-    def config(self, waveform_dict=None, frequency_mhz=10):
+    def config(self, waveform_dict, frequency_mhz=10):
         """Configure the PG with a single bit pattern.
 
         Generates a bit pattern for a single shot operation at specified IO 
@@ -220,31 +243,45 @@ class PatternBuilder:
         Users can ignore the returned data in case only the pattern
         builder is required.
 
+        This method is called during initialization, but can also be called 
+        separately if users want to change the waveform dictionary, or the
+        frequency of the pattern generation / capture.
+
         Parameters
         ----------
+        waveform_dict : dict
+            Waveform dictionary in WaveJSON format.
         frequency_mhz: float
             The frequency of the captured samples, in MHz.
 
         Returns
         -------
-        (numpy.ndarray,numpy.ndarray)
-            The generated samples, and the captured samples.
+        None
 
         """
-
         # Update Waveform based on waveform_dict
-        if waveform_dict is not None:
-            self.waveform_dict = waveform_dict
-
-        self.waveform = Waveform(self.waveform_dict, stimulus_name=self.stimulus_name,
+        self.waveform_dict = waveform_dict
+        self.frequency_mhz = frequency_mhz
+        self.waveform = Waveform(waveform_dict, 
+                                 stimulus_name=self.stimulus_name,
                                  analysis_name=self.analysis_name)
         self.stimulus_group = self.waveform.stimulus_group
         self.analysis_group = self.waveform.analysis_group
         self.stimulus_names = self.waveform.stimulus_names
         self.stimulus_pins = self.waveform.stimulus_pins
         self.stimulus_waves = self.waveform.stimulus_waves
-        self._wave_length_equal = self._is_wave_length_equal()
-        self._longest_wave, self._max_wave_length = self._get_max_wave_length()
+        self.analysis_names = self.waveform.analysis_names
+        self.analysis_pins = self.waveform.analysis_pins
+
+        if self.stimulus_name:
+            self._longest_wave, self._max_wave_length = \
+                self._get_max_wave_length()
+        elif self.analysis_name:
+            self._longest_wave, self._max_wave_length = \
+                '', num_analyzer_samples
+        else:
+            raise ValueError("Must specify at least one "
+                             "stimulus/analysis group.")
         self._make_same_wave_length()
 
         # Set other PG parameters
@@ -255,24 +292,28 @@ class PatternBuilder:
         num_samples = self._max_wave_length
         temp_lanes = np.zeros((self.intf_spec['interface_width'], num_samples),
                               dtype=np.uint8)
-        data = self.stimulus_waves[:]
-        for index, wave in enumerate(data):
-            pin_number = self.intf_spec['output_pin_map']\
-                [self.stimulus_pins[index]]
-            direction_mask &= (~(1 << pin_number))
-            temp_lanes[pin_number] = data[index] = bitstring_to_int(
-                wave_to_bitstring(wave))
-        temp_samples = temp_lanes.T.copy()
-        self.src_samples = np.apply_along_axis(
-            int_to_sample, 1, temp_samples)
+
+        # Prepare stimulus samples
+        if self.stimulus_waves:
+            data = self.stimulus_waves[:]
+            for index, wave in enumerate(data):
+                pin_number = self.intf_spec[
+                    'traceable_outputs'][self.stimulus_pins[index]]
+                direction_mask &= (~(1 << pin_number))
+                temp_lanes[pin_number] = data[index] = bitstring_to_int(
+                    wave_to_bitstring(wave))
+            temp_samples = temp_lanes.T.copy()
+            self.src_samples = np.apply_along_axis(
+                int_to_sample, 1, temp_samples)
 
         # Allocate the source buffer
         src_addr = self.intf.allocate_buffer('src_buf', num_samples,
                                              data_type="unsigned int")
 
         # Write samples into the source buffer
-        for index, data in enumerate(self.src_samples):
-            self.intf.buffers['src_buf'][index] = data
+        if self.src_samples is not None:
+            for index, data in enumerate(self.src_samples):
+                self.intf.buffers['src_buf'][index] = data
 
         # Wait for the interface processor to return control (1 : multiple)
         self.intf.write_control([direction_mask, src_addr, num_samples, 1])
@@ -297,25 +338,39 @@ class PatternBuilder:
             self.analyzer.arm()
 
     def is_armed(self):
-        """ Check if this builder's hardware is armed """
+        """Check if this builder's hardware is armed.
+
+        Returns
+        -------
+        Bool
+            True if the builder's hardware is armed.
+
+        """
         return self.intf.armed_builders[CMD_ARM_PG]
 
-    def run(self):
+    def start(self):
         """Run the pattern generation.
 
         This method will start to run the pattern generation.
 
         """
-        self.arm()
-        self.intf.write_command(CMD_RUN)
+        if not self.is_armed():
+            self.arm()
 
-    def stop(self):
+        self.intf.start()
+
+    def stop(self, free_buffer=True):
         """Stop the pattern generation.
         
         This method will stop the currently running pattern generation.
-        
+
+        Parameters
+        ----------
+        free_buffer : Bool
+            The flag indicating whether or not to free the analyzer buffer.
+
         """
-        self.intf.write_command(CMD_STOP)
+        self.intf.stop(free_buffer)
 
     def show_waveform(self):
         """Display the waveform in Jupyter notebook.
@@ -331,22 +386,6 @@ class PatternBuilder:
             raise ValueError("Trace disabled, please enable and rerun.")
         self.waveform.display()
 
-    def _is_wave_length_equal(self):
-        """Test if all the waves are of the same length.
-
-        Test if all the waves have the same number of tokens / samples.
-
-        Returns
-        -------
-        Bool
-            True if all waves have same number of tokens.
-
-        """
-        for wave in self.stimulus_waves:
-            if len(wave) != len(self.stimulus_waves[0]):
-                return False
-        return True
-
     def _get_max_wave_length(self):
         """Find longest wave (with most tokens).
 
@@ -360,33 +399,38 @@ class PatternBuilder:
             Name and length of the longest wave.
 
         """
-        if self._is_wave_length_equal():
-            return self.stimulus_names[0],\
-                len(self.stimulus_waves[0])
-        else:
-            max_wave_length = 0
-            name_of_longest_wave = ''
-            for index, wave in enumerate(self.stimulus_waves):
-                if len(wave) > max_wave_length:
-                    max_wave_length = len(wave)
-                    name_of_longest_wave = self.stimulus_names[index]
-            return name_of_longest_wave, max_wave_length
+        max_wave_length = 0
+        name_of_longest_wave = ''
+        for index, wave in enumerate(self.stimulus_waves):
+            if len(wave) > max_wave_length:
+                name_of_longest_wave = self.stimulus_names[index]
+                max_wave_length = len(wave)
+
+        if not 1 <= max_wave_length <= MAX_NUM_PATTERN_SAMPLES:
+            raise ValueError(f"Waves should have 1 - "
+                             f"{MAX_NUM_PATTERN_SAMPLES} samples.")
+        return name_of_longest_wave, max_wave_length
 
     def _make_same_wave_length(self):
         """Set the all the waves to the same length.
 
         This method will pad the same tokens to the end of all the shorter
         waves. For example, if there are only 2 waves:
-        'lhlhlh' (length of 6) and 'llhhllhh' (length of 8), then the shorter
+        'lhlhlh' (length of 6) and 'llhhllhh' (length of 8), while the number
+        of analyzer samples is set to 8. Then the shorter
         one will be converted to: 'lhlhlhhh' (repeating the last token two
         more times).
 
         """
+        if self.analyzer is not None:
+            self._max_wave_length = max(self.num_analyzer_samples,
+                                        self._max_wave_length)
+        else:
+            self._max_wave_length = self._max_wave_length
+
         for index, wave in enumerate(self.stimulus_waves):
             len_diff = self._max_wave_length - len(wave)
-            if len_diff:
+            if len_diff > 0:
                 self.stimulus_waves[index] = wave + wave[-1] * len_diff
                 print(f"WaveLane {self.stimulus_names[index]} extended to " +
-                      f"{self._max_wave_length} tokens to match " +
-                      f"{self._longest_wave}, " +
-                      f"the longest WaveLane in the group.")
+                      f"{self._max_wave_length} tokens.")
