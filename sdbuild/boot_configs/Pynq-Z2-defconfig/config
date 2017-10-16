@@ -7,7 +7,7 @@ LINUX_COMMIT ?= 5d029fdc257cf88e65500db348eda23040af332b
 UBOOT_REPO ?= https://github.com/Digilent/u-boot-digilent.git
 UBOOT_COMMIT ?= e2382ceaffc0c36dc21c01576c1e454af0e01ca1
 
-BOARD = Pynq-Z1
+BOARD = Pynq-Z2
 BOARD_PART = xc7z020clg400-1
 PS_CONFIG_TCL ?= ${BOOT_CONFIG_ABS}/ps7_config.tcl
 BOARD_CONSTRAINTS ?= ${BOOT_CONFIG_ABS}/constraints.xdc
