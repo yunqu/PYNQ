@@ -45,8 +45,8 @@
  # ----- --- -------- -----------------------------------------------
  # 1.00a pp  01/24/2017 initial release
  # 1.00b yrq 08/08/2017 added trace analyzers for pmoda, pmodb, arduino
- # 1.00c pp  10/18/2017 Retargetd to PYNQ-Z2 board
- #						supporting pmoda, pmodb, arduino, and raspberrypi 
+ # 2.00a pp  10/18/2017 retarget PYNQ-Z2 board
+ #		        supporting pmoda, pmodb, arduino, and raspberrypi 
  #
  # </pre>
  #
