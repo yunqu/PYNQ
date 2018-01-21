@@ -46,12 +46,23 @@ if 'BOARD' not in os.environ:
     print("Please set the BOARD environment variable to get any BOARD specific overlays (e.g. Pynq-Z1).")
     board = None
     board_folder = None
-    pynq_data_files = None
+    pynq_data_files = []
 else:
     board = os.environ['BOARD']
     board_folder = 'boards/{}/'.format(board)
     pynq_data_files = [(os.path.join('{}/pynq/overlays'.format(site.getsitepackages()[0]), root.replace(board_folder, '')),
                         [os.path.join(root, f) for f in files]) for root, dirs, files in os.walk(board_folder)]
+
+# Extend data_files with Microblaze C BSPs and libraries
+microblaze_data_dirs = ['pynq/lib/pynqmicroblaze/modules',
+                        'pynq/lib/arduino/bsp_iop_arduino']
+
+for mbdir in microblaze_data_dirs:
+    pynq_data_files.extend(
+        [(os.path.join(site.getsitepackages()[0], root),
+         [os.path.join(root, f) for f in files])
+        for root, _, files in os.walk(mbdir)]
+    )
 
 # Device family constants
 ZYNQ_ARCH = "armv7l"
