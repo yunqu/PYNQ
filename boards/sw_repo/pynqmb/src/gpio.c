@@ -52,6 +52,8 @@
 #include "gpio.h"
 
 #ifdef XPAR_XGPIO_NUM_INSTANCES
+#include "xgpio_l.h"
+#include "xgpio.h"
 static XGpio xgpio[XPAR_XGPIO_NUM_INSTANCES];
 /************************** Function Definitions ***************************/
 gpio gpio_open_device(unsigned int device){
@@ -88,6 +90,7 @@ gpio gpio_open_device(unsigned int device){
 
 #ifdef XPAR_IO_SWITCH_NUM_INSTANCES
 #ifdef XPAR_IO_SWITCH_0_GPIO_BASEADDR
+#include "xio_switch.h"
 gpio gpio_open(unsigned int pin){
     init_io_switch();
     set_pin(pin, GPIO);

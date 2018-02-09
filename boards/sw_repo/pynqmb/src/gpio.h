@@ -53,13 +53,7 @@
 
 #include <xparameters.h>
 
-#ifdef XPAR_IO_SWITCH_NUM_INSTANCES
-#include "xio_switch.h"
-#endif
-
 #ifdef XPAR_XGPIO_NUM_INSTANCES
-#include "xgpio_l.h"
-#include "xgpio.h"
 
 enum {
 GPIO_OUT = 0,

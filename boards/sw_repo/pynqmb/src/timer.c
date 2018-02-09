@@ -53,6 +53,7 @@
 #include "timer.h"
 
 #ifdef XPAR_XTMRCTR_NUM_INSTANCES
+#include "xtmrctr.h"
 static XTmrCtr xtimer[XPAR_XTMRCTR_NUM_INSTANCES];
 /************************** Function Definitions ***************************/
 timer timer_open_device(unsigned int device) {
@@ -84,6 +85,7 @@ timer timer_open_device(unsigned int device) {
 
 #ifdef XPAR_IO_SWITCH_NUM_INSTANCES
 #ifdef XPAR_IO_SWITCH_0_TIMER0_BASEADDR
+#include "xio_switch.h"
 timer timer_open(unsigned int pin){
     init_io_switch();
     set_pin(pin, TIMER_G0);
