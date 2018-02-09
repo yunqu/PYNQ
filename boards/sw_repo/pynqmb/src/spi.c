@@ -55,7 +55,7 @@
 #ifdef XPAR_XSPI_NUM_INSTANCES
 #include "xspi_l.h"
 #include "xspi.h"
-static XSpi xspi[XPAR_XTMRCTR_NUM_INSTANCES];
+static XSpi xspi[XPAR_XSPI_NUM_INSTANCES];
 /************************** Function Definitions ***************************/
 spi spi_open_device(unsigned int device){
     int status;
