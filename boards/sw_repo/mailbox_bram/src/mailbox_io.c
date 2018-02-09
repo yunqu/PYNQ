@@ -230,17 +230,19 @@ int mailbox_close(int fd) {
 }
 
 
-void mailbox_outbyte(intptr_t device, char c) {
+void mailbox_outbyte(intptr_t device __attribute__((unused)), char c) {
 	mailbox_write(1, &c, 1);
 }
 
-char mailbox_inbyte(intptr_t device) {
+char mailbox_inbyte(intptr_t device __attribute__((unused))) {
 	char c;
 	mailbox_read(0, &c, 1);
 	return c;
 }
 
-off_t mailbox_lseek(int fd, off_t offset, int whence) {
+off_t mailbox_lseek(int fd __attribute__((unused)),
+		off_t offset __attribute__((unused)),
+		int whence __attribute__((unused))) {
 	return ESPIPE;
 }
 
@@ -254,7 +256,9 @@ ssize_t read(int file, void* ptr, size_t len) {
 	return mailbox_read(file, ptr, len);
 }
 
-off_t lseek(int fd, off_t offset, int whence) {
+off_t lseek(int fd __attribute__((unused)),
+		off_t offset __attribute__((unused)),
+		int whence __attribute__((unused))) {
 	return ESPIPE;
 }
 
