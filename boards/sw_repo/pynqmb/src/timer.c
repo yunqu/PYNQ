@@ -88,8 +88,12 @@ timer timer_open_device(unsigned int device) {
 #ifdef XPAR_IO_SWITCH_NUM_INSTANCES
 #ifdef XPAR_IO_SWITCH_0_TIMER0_BASEADDR
 #include "xio_switch.h"
+
+static int last_timer0 = -1;
+
 timer timer_open(unsigned int pin){
-    init_io_switch();
+    if (last_timer0 != -1) set_pin(last_timer0, GPIO);
+    last_timer0 = pin;
     set_pin(pin, TIMER_G0);
     return timer_open_device(XPAR_IO_SWITCH_0_TIMER0_BASEADDR);
 }

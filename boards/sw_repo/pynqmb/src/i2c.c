@@ -93,8 +93,14 @@ void i2c_read(i2c dev_id, unsigned int slave_address,
 #ifdef XPAR_IO_SWITCH_NUM_INSTANCES
 #ifdef XPAR_IO_SWITCH_0_I2C0_BASEADDR
 #include "xio_switch.h"
+static int last_sda = -1;
+static int last_scl = -1;
+
 i2c i2c_open(unsigned int sda, unsigned int scl){
-    init_io_switch();
+    if (last_sda != -1) set_pin(last_sda, GPIO);
+    if (last_scl != -1) set_pin(last_scl, GPIO);
+    last_sda = sda;
+    last_scl = scl;
     set_pin(scl, SCL0);
     set_pin(sda, SDA0);
     return i2c_open_device(XPAR_IO_SWITCH_0_I2C0_BASEADDR);

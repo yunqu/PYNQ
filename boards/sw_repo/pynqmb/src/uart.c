@@ -85,8 +85,14 @@ uart uart_open_device(unsigned int device){
 #ifdef XPAR_IO_SWITCH_NUM_INSTANCES
 #ifdef XPAR_IO_SWITCH_0_UART0_BASEADDR
 #include "xio_switch.h"
+static int last_tx = -1;
+static int last_rx = -1;
+
 uart uart_open(unsigned int tx, unsigned int int rx){
-    init_io_switch();
+    if (last_tx != -1) set_pin(last_tx, GPIO);
+    if (last_rx != -1) set_pin(last_rx, GPIO);
+    last_tx = tx;
+    last_rx = rx;
     set_pin(tx, UART0_TX);
     set_pin(rx, UART0_RX);
     return uart_open_device(XPAR_IO_SWITCH_0_UART0_BASEADDR);

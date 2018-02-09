@@ -104,9 +104,21 @@ spi spi_open_device(unsigned int device){
 #ifdef XPAR_IO_SWITCH_NUM_INSTANCES
 #ifdef XPAR_IO_SWITCH_0_SPI0_BASEADDR
 #include "xio_switch.h"
+static int last_spiclk = -1;
+static int last_miso = -1;
+static int last_mosi = -1;
+static int last_ss = -1;
+
 spi spi_open(unsigned int spiclk, unsigned int miso, 
              unsigned int mosi, unsigned int ss){
-    init_io_switch();
+    if (last_spiclk != -1) set_pin(last_spiclk, GPIO);
+    if (last_miso != -1) set_pin(last_miso, GPIO);
+    if (last_mosi != -1) set_pin(last_mosi, GPIO);
+    if (last_ss != -1) set_pin(last_ss, GPIO);
+    last_spiclk = spiclk;
+    last_miso = miso;
+    last_mosi = mosi;
+    last_ss = ss;
     set_pin(spiclk, SPICLK0);
     set_pin(miso, MISO0);
     set_pin(mosi, MOSI0);
