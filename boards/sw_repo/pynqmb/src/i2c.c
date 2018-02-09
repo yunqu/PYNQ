@@ -56,23 +56,25 @@
 #include "xiic.h"
 #include "xiic_l.h"
 static XIic xi2c[XPAR_XIIC_NUM_INSTANCES];
+extern XIic_Config XIic_ConfigTable[];
 /************************** Function Definitions ***************************/
 i2c i2c_open_device(unsigned int device){
     int status;
     u16 dev_id;
 
-    dev_id = (u16)device;
-#ifdef XPAR_IIC_0_BASEADDR
-    if (device == XPAR_IIC_0_BASEADDR){
-        dev_id = 0;
+    if (device < XPAR_XIIC_NUM_INSTANCES) {
+        dev_id = (u16)device;
+    } else {
+        int found = 0;
+        for (u16 i = 0; i < XPAR_XIIC_NUM_INSTANCES; ++i) {
+            if (XIic_ConfigTable[i].BaseAddress == device) {
+                found = 1;
+                dev_id = i;
+                break;
+            }
+        }
+        if (!found) return -1;
     }
-#endif
-#ifdef XPAR_IIC_1_BASEADDR
-    if (device == XPAR_IIC_1_BASEADDR){
-        dev_id = 1;
-    }
-#endif
-
     status = XIic_Initialize(&xi2c[dev_id], dev_id);
     if (status != XST_SUCCESS) {
         return -1;

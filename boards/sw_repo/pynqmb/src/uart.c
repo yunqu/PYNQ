@@ -55,23 +55,25 @@
 #include "xuartlite.h"
 #include "xuartlite_i.h"
 static XUartLite xuart[XPAR_XUART_NUM_INSTANCES];
+extern XUartLite_Config XUartLite_ConfigTable[XPAR_XUART_NUM_INSTANCES];
+
 /************************** Function Definitions ***************************/
 uart uart_open_device(unsigned int device){
     int status;
     u16 dev_id;
-    
-    dev_id = (u16)device;
-#ifdef XPAR_UART_0_BASEADDR
-    if (device == XPAR_UART_0_BASEADDR){
-        dev_id = 0;
+    if (device < XPAR_XUART_NUM_INSTANCES) {
+        dev_id = (u16)device;
+    } else {
+        int found = 0;
+        for (u16 i = 0; i < XPAR_XUART_NUM_INSTANCES; ++i) {
+            if (XUartLite_ConfigTable[i].RegBaseAddr == device) {
+                found = 1;
+                dev_id = i;
+                break;
+            }
+        }
+        if (!found) return -1;
     }
-#endif
-#ifdef XPAR_UART_1_BASEADDR
-    if (device == XPAR_UART_1_BASEADDR){
-        dev_id = 1;
-    }
-#endif
-
     status = XUartLite_Initialize(&xuart[dev_id], dev_id);
     if (status != XST_SUCCESS) {
         return -1;
