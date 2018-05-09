@@ -36,6 +36,6 @@ import pynq
 import pynq.lib
 
 
-class EddpOverlay(pynq.Overlay):
+class SpynOverlay(pynq.Overlay):
     def __init__(self, bitfile, **kwargs):
         pass
