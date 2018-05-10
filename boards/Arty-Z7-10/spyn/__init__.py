@@ -32,4 +32,4 @@ __author__ = "KV Thanjavur Bhaaskar, Naveen Purushotham"
 __copyright__ = "Copyright 2018, Xilinx"
 __email__ = "kvt@xilinx.com, npurusho@xilinx.com"
 
-from .eddp import EddpOverlay
+from .spyn import SpynOverlay
