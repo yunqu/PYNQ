@@ -40,7 +40,7 @@ import os
 from pynq import Overlay
 from pynq import MMIO
 import numpy as np
-from spyn import *
+from pynq.lib.spyn import Motor_Controller
 from pynq import Xlnk
 from flask import send_from_directory
 
