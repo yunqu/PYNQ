@@ -70,6 +70,8 @@ from .logictools import PatternGenerator
 from .logictools import TraceAnalyzer
 from .logictools import FSMGenerator
 
+from .spyn import Motor_Controller
+
 from . import video
 from . import audio
 from . import dma
