@@ -33,4 +33,4 @@ __copyright__ = "Copyright 2018, Xilinx"
 __email__ = "kvt@xilinx.com, npurusho@xilinx.com"
 
 from .spyn import SpynOverlay
-from .spyn import Motor_Controller
+
