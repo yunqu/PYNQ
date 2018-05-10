@@ -7,11 +7,10 @@ LINUX_COMMIT ?= xilinx-v2017.4
 UBOOT_REPO ?= https://github.com/Digilent/u-boot-digilent.git
 UBOOT_COMMIT ?= e2382ceaffc0c36dc21c01576c1e454af0e01ca1
 
-BOARD = Arty-Z7
+BOARD = Arty-Z7-10
 BOARD_PART = xc7z010clg400-1
 PS_CONFIG_TCL ?= ${BOOT_CONFIG_ABS}/ps7_config.tcl
 BOARD_CONSTRAINTS ?= ${BOOT_CONFIG_ABS}/constraints.xdc
-BOOT_BITSTREAM ?= ${WORKDIR}/PYNQ/boards/${BOARD}/eddp/eddp.bit
 
 LINUX_CONFIG ?= ${BOOT_CONFIG_ABS}/kernel.config
 UBOOT_CONFIG ?= ${BOOT_CONFIG_ABS}/u-boot.config
