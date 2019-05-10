@@ -24,6 +24,8 @@ KERNEL_aarch64 := Image
 BOOT_arm := u-boot.elf zynq_fsbl.elf
 BOOT_aarch64 := u-boot.elf zynqmp_fsbl.elf pmufw.elf bl31.elf
 
+DTC := $(CURDIR)/tools/dtc-1.4.5/dtc
+
 export CCACHEDIR
 export ROOTDIR
 export BUILD_ROOT
@@ -153,6 +155,12 @@ $$(PL_PROJ_$1)/images/linux/$$(KERNEL_$$(ARCH_$1)): $$(PL_CONFIG_$1)
 
 $$(PL_PROJ_$1)/images/linux/system.dtb:  $$(PL_CONFIG_$1)
 	PYNQ_BOARDNAME=$1 petalinux-build -c device-tree -p $$(PL_PROJ_$1)
+	cd $${PL_PROJ_$1}/components/plnx_workspace/device-tree/device-tree \
+	&& cp -f $${ROOTDIR}/boot/meta-pynq/recipes-bsp/device-tree/files/* . \
+	&& cp -f ./../../../../project-spec/meta-user/recipes-bsp/device-tree/files/system-user.dtsi . \
+	&& cpp -Iinclude -E -P -x assembler-with-cpp system-top.dts | $${DTC} -@ -I dts -O dtb -o system.dtb - \
+	&& cp -f system.dtb $$(PL_PROJ_$1)/images/linux/system.dtb
+
 
 $$(PL_PROJ_$1)/images/linux/pmufw.elf:  $$(PL_CONFIG_$1)
 	PYNQ_BOARDNAME=$1 petalinux-build -c pmufw -p $$(PL_PROJ_$1)

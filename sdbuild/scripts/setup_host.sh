@@ -49,6 +49,9 @@ socat
 zlib1g-dev
 zlib1g:i386
 gcc-multilib
+python-dev
+pkg-config
+swig
 EOT
 set -e
 
@@ -71,6 +74,14 @@ fi
 
 mkdir tools
 cd tools/
+
+# Downloads a version of the device tree compiler that supports symbols and builds it in the sdbuild directory
+wget https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/device-tree-compiler/1.4.5-3/device-tree-compiler_1.4.5.orig.tar.gz
+tar -xzf device-tree-compiler_1.4.5.orig.tar.gz
+rm device-tree-compiler_1.4.5.orig.tar.gz
+cd dtc-1.4.5
+make
+cd ..
 
 ctver="1.24.0"
 wget http://crosstool-ng.org/download/crosstool-ng/crosstool-ng-$ctver.tar.bz2
