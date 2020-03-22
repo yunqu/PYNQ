@@ -4,8 +4,9 @@
 set -e
 set -x
 
+export HOME=/root
 export JAVA_HOME="$(dirname $(dirname $(realpath $(which javac))))"
-VERSION=0.29.1
+VERSION=1.1.0
 
 # download the release
 cd /root
